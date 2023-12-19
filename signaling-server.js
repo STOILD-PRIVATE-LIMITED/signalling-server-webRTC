@@ -11,7 +11,8 @@ const fs = require("fs");
 const express = require('express');
 // var http = require('http');
 const https = require("https");
-const bodyParser = require('body-parser')
+const bodyParser = require('body-parser');
+const { channel } = require("diagnostics_channel");
 const main = express()
 // const server = http.createServer(main)
 
@@ -33,22 +34,22 @@ server.listen(PORT, null, function () {
 //main.use(express.bodyParser());
 
 main.get('/', function (req, res) { res.sendFile(__dirname + '/client.html'); });
-function getTopKeys(map) {
-    const mapEntries = Object.entries(map);
-    mapEntries.sort((a, b) => b[1].length - a[1].length);
-    const top5Keys = mapEntries.slice(0, 5).map(entry => entry[0]);
-    return top5Keys;
-}
+// function getTopKeys(map) {
+//     const mapEntries = Object.entries(map);
+//     mapEntries.sort((a, b) => b[1].length - a[1].length);
+//     const top5Keys = mapEntries.slice(0, 5).map(entry => entry[0]);
+//     return top5Keys;
+// }
 
-main.get('/toprooms', function (req, res) {
-    if (channels)
-        res.send({
-            "topRooms": getTopKeys(channels)
-        });
-    else {
-        res.status(500).send("Channels not defined.");
-    }
-});
+// main.get('/toprooms', function (req, res) {
+//     if (channels)
+//         res.send({
+//             "topRooms": getTopKeys(channels)
+//         });
+//     else {
+//         res.status(500).send("Channels not defined.");
+//     }
+// });
 // main.get('/client.html', function(req, res){ res.sendfile('newclient.html'); });
 
 
@@ -140,6 +141,16 @@ io.sockets.on('connection', function (socket) {
 
         if (peer_id in sockets) {
             sockets[peer_id].emit('iceCandidate', { 'peer_id': socket.id, 'ice_candidate': ice_candidate });
+        }
+    });
+
+    socket.on('message', function (data) {
+        // expected input {'channel': roomName, 'message': message}
+        ch = data.channel;
+        msg = data.message;
+        console.log("[" + socket.id + "] broadcasting on channel '" + ch + "' a message: " + data.message);
+        for (id in channels[ch]) {
+            channels[ch][id].emit('broadcastMsg', { 'peer_id': socket.id, 'message': msg, 'userData': socket.userdata });
         }
     });
 
