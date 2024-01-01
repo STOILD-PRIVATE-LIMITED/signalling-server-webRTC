@@ -1,20 +1,93 @@
-/**************/
-/*** CONFIG ***/
-/**************/
-const PORT = 8080;
-
-
-/*************/
-/*** SETUP ***/
-/*************/
-const fs = require("fs");
 const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require("fs");
 // var http = require('http');
 const https = require("https");
-const bodyParser = require('body-parser');
 const { channel } = require("diagnostics_channel");
-const main = express()
-// const server = http.createServer(main)
+
+const app = express();
+const port = 8080;
+
+app.use(bodyParser.json());
+
+const { Room } = require('./models/room');
+const { generateUniqueRoomId } = require('./utils');
+
+// Get rooms
+app.get('/api/rooms', async (req, res) => {
+    console.log("get Request on '/api/rooms'");
+    const { id, userId } = req.query;
+    try {
+        let roomData;
+        if (id) {
+            roomData = await Room.findById(id);
+        } else if (userId) {
+            roomData = await Room.findOne({ admin: userId });
+        }
+        if (!roomData) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+        res.status(200).json(roomData);
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Create a new room
+app.post('/api/rooms', async (req, res) => {
+    console.log("post Request on ('/api/rooms',");
+    let roomData = req.body;
+    const { admin } = roomData;
+    try {
+        const existingRoom = await Room.findOne({ admin: admin });
+        if (existingRoom) {
+            return res.status(400).json({ error: 'Room for this user already exists' });
+        }
+        roomData.id = await generateUniqueRoomId();
+        const newRoom = new Room(roomData);
+        await newRoom.save();
+        res.json(newRoom);
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Update an existing room
+app.put('/api/rooms', async (req, res) => {
+    console.log("put Request on '/api/rooms',");
+    const { admin } = req.body;
+    try {
+        const existingRoom = await Room.findOne({ admin: admin });
+        if (!existingRoom) {
+            return res.status(404).json({ error: 'Room not found' });
+        }
+        await existingRoom.updateOne(req.body);
+        res.json(existingRoom);
+    } catch (error) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/api/rooms/all', async (req, res) => {
+    console.log("get Request on '/api/rooms/all");
+    try {
+        const rooms = Object.keys(channels).map((channel) => ({
+            channelId: channel,
+            numSockets: Object.keys(channels[channel]).length,
+        }));
+        rooms.sort((a, b) => b.numSockets - a.numSockets);
+        const { limit, start } = req.query;
+        const startIndex = start ? parseInt(start, 10) : 0;
+        const endIndex = limit ? startIndex + parseInt(limit, 10) : rooms.length;
+        const paginatedRooms = rooms.slice(startIndex, endIndex);
+        res.status(200).json(paginatedRooms);
+    } catch (error) {
+        console.error('Error fetching rooms:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// const server = http.createServer(app)
 
 
 let privateKey, certificate;
@@ -22,18 +95,18 @@ let privateKey, certificate;
 privateKey = fs.readFileSync("ssl/server-key.pem", "utf8");
 certificate = fs.readFileSync("ssl/server-cert.pem", "utf8");
 const credentials = { key: privateKey, cert: certificate };
-const server = https.createServer(credentials, main);
-// const server = http.createServer(main);
+const server = https.createServer(credentials, app);
+// const server = http.createServer(app);
 
 const io = require('socket.io')(server);
 //io.set('log level', 2);
 
-server.listen(PORT, null, function () {
-    console.log("Listening on port " + PORT);
+server.listen(port, null, function () {
+    console.log("Listening on port " + port);
 });
-//main.use(express.bodyParser());
+//app.use(express.bodyParser());
 
-main.get('/', function (req, res) { res.sendFile(__dirname + '/client.html'); });
+app.get('/', function (req, res) { res.sendFile(__dirname + '/client.html'); });
 // function getTopKeys(map) {
 //     const mapEntries = Object.entries(map);
 //     mapEntries.sort((a, b) => b[1].length - a[1].length);
@@ -41,7 +114,7 @@ main.get('/', function (req, res) { res.sendFile(__dirname + '/client.html'); })
 //     return top5Keys;
 // }
 
-// main.get('/toprooms', function (req, res) {
+// app.get('/toprooms', function (req, res) {
 //     if (channels)
 //         res.send({
 //             "topRooms": getTopKeys(channels)
@@ -50,7 +123,7 @@ main.get('/', function (req, res) { res.sendFile(__dirname + '/client.html'); })
 //         res.status(500).send("Channels not defined.");
 //     }
 // });
-// main.get('/client.html', function(req, res){ res.sendfile('newclient.html'); });
+// app.get('/client.html', function(req, res){ res.sendfile('newclient.html'); });
 
 
 
@@ -129,6 +202,11 @@ io.sockets.on('connection', function (socket) {
         for (id in channels[channel]) {
             channels[channel][id].emit('removePeer', { 'peer_id': socket.id });
             socket.emit('removePeer', { 'peer_id': id });
+        }
+
+        if (Object.keys(channels[channel]).length === 0) {
+            console.log("Deleting room ", channel, " for it is empty");
+            delete channels[channel];
         }
     }
     socket.on('part', part);
