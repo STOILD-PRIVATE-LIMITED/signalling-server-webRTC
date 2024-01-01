@@ -1,9 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require("fs");
-// var http = require('http');
+var http = require('http');
 const { exec } = require('child_process');
-const https = require("https");
+// const https = require("https");
 const { channel } = require("diagnostics_channel");
 
 const app = express();
@@ -36,7 +36,7 @@ app.get('/api/rooms', async (req, res) => {
 
 // Create a new room
 app.post('/api/rooms', async (req, res) => {
-    console.log("post Request on ('/api/rooms',");
+    console.log("post Request on ('/api/rooms')");
     let roomData = req.body;
     const { admin } = roomData;
     try {
@@ -54,12 +54,13 @@ app.post('/api/rooms', async (req, res) => {
 });
 
 // Update an existing room
-app.put('/api/rooms', async (req, res) => {
-    console.log("put Request on '/api/rooms',");
+app.post('/api/update-room', async (req, res) => {
+    console.log("post Request on '/api/update-room',");
     const { admin } = req.body;
     try {
         const existingRoom = await Room.findOne({ admin: admin });
         if (!existingRoom) {
+            console.log("Room not found with admin:", admin);
             return res.status(404).json({ error: 'Room not found' });
         }
         await existingRoom.updateOne(req.body);
@@ -81,7 +82,12 @@ app.get('/api/rooms/all', async (req, res) => {
         const startIndex = start ? parseInt(start, 10) : 0;
         const endIndex = limit ? startIndex + parseInt(limit, 10) : rooms.length;
         const paginatedRooms = rooms.slice(startIndex, endIndex);
-        res.status(200).json(paginatedRooms);
+        const detailedRooms = await Promise.all(paginatedRooms.map(async (room) => {
+            const roomData = await Room.findOne({ id: room.channelId });
+            return roomData;
+        }));
+        console.log("paginatedRooms", detailedRooms);
+        res.status(200).json(detailedRooms);
     } catch (error) {
         console.error('Error fetching rooms:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -109,13 +115,13 @@ app.get('/api/update-server', async (req, res) => {
 // const server = http.createServer(app)
 
 
-let privateKey, certificate;
+// let privateKey, certificate;
 
-privateKey = fs.readFileSync("ssl/server-key.pem", "utf8");
-certificate = fs.readFileSync("ssl/server-cert.pem", "utf8");
-const credentials = { key: privateKey, cert: certificate };
-const server = https.createServer(credentials, app);
-// const server = http.createServer(app);
+// privateKey = fs.readFileSync("ssl/server-key.pem", "utf8");
+// certificate = fs.readFileSync("ssl/server-cert.pem", "utf8");
+// const credentials = { key: privateKey, cert: certificate };
+// const server = https.createServer(credentials, app);
+const server = http.createServer(app);
 
 const io = require('socket.io')(server);
 //io.set('log level', 2);
@@ -192,6 +198,15 @@ io.sockets.on('connection', function (socket) {
 
         if (!(channel in channels)) {
             console.log(`Creating a new room with id: ${channel}`);
+            // Room.findOne({ id: channel }).then((roomData) => {
+            //     if (!roomData) {
+            //         console.log("Room not found");
+            //         return;
+            //     } else {
+            //         console.log(`updating ${roomData}`);
+            //     }
+            //     roomData.updateOne({ createdAt: new Date() });
+            // });
             channels[channel] = {};
         }
 
