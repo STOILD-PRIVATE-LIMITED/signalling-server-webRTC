@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require("fs");
 // var http = require('http');
+const { exec } = require('child_process');
 const https = require("https");
 const { channel } = require("diagnostics_channel");
 
@@ -84,6 +85,24 @@ app.get('/api/rooms/all', async (req, res) => {
     } catch (error) {
         console.error('Error fetching rooms:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.get('/api/update-server', async (req, res) => {
+    console.log("get Request on '/api/update-server");
+    const payload = req.body;
+    if (payload && payload.ref === 'refs/heads/master') {
+        exec('git pull', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error: ${error.message}`);
+                res.status(500).send('Internal Server Error');
+                return;
+            }
+            console.log(`Git Pull Successful: ${stdout}`);
+            res.status(200).send('Server Updated Successfully');
+        });
+    } else {
+        res.status(200).send('Ignoring non-master branch push event');
     }
 });
 
