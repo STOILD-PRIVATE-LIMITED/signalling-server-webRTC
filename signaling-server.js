@@ -261,7 +261,11 @@ io.sockets.on('connection', function (socket) {
         ch = data.channel;
         msg = data.message;
         data = data.data;
-        console.log("[" + socket.id + "] broadcasting on channel '", ch, "' a message: ", data.message, " and data: ", data);
+        console.log("[" + socket.id + "] broadcasting on channel '", ch);
+        if (data.message)
+            console.log("' a message: ", data.message);
+        if (data.data)
+            console.log("' a data: ", data.data);
         for (id in channels[ch]) {
             channels[ch][id].emit('broadcastMsg', { 'peer_id': socket.id, 'message': msg, 'userData': socket.userdata, 'data': data });
         }
