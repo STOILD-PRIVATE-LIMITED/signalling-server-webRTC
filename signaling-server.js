@@ -157,6 +157,7 @@ app.get('/', function (req, res) { res.sendFile(__dirname + '/client.html'); });
 /*************************/
 var channels = {};
 var sockets = {};
+var invitedUsers = {};  // {channel: [user1, user2, ...]}
 
 /**
  * Users will connect to the signaling server, after which they'll issue a "join"
@@ -208,6 +209,8 @@ io.sockets.on('connection', function (socket) {
             //     roomData.updateOne({ createdAt: new Date() });
             // });
             channels[channel] = {};
+            console.log("Creating 8 seats.");
+            invitedUsers[channel] = Array(8).fill(null);
         }
 
         for (id in channels[channel]) {
@@ -221,6 +224,61 @@ io.sockets.on('connection', function (socket) {
         socket.channels[channel] = channel;
     });
 
+    socket.on('inviteUser', function (config) {
+        console.log("Invite event called");
+        var channel = config.channel;
+        var userId = config.userId;
+        var seat = config.seat;
+        console.log(`[${socket.userdata.id}] invite ${userId} to join ${channel} on seat ${seat}`);
+
+        if (!(channel in channels)) {
+            console.log(`[${socket.id}] ERROR: not in ${channel}`);
+            return;
+        }
+
+        if (invitedUsers[channel][seat]) {
+            console.log(`[${socket.id}] seat ${seat} is already occupied, replacing user ${invitedUsers[channel][seat]} with ${userId}`);
+        }
+
+        if (invitedUsers[channel].indexOf(userId) !== -1) {
+            console.log(`[${socket.id}] user is already on seat ${invitedUsers[channel].indexOf(userId)}. Moving hime to new seat ${seat}`);
+            invitedUsers[channel][invitedUsers[channel].indexOf(userId)] = null;
+        }
+
+        invitedUsers[channel][seat] = userId;
+
+        for (id in channels[channel]) {
+            channels[channel][id].emit('seatsChanged', { 'seats': invitedUsers[channel] });
+        }
+    });
+
+    socket.on('getSeats', function (config) {
+        console.log("GetSeats event called");
+        var channel = config.channel;
+        console.log(`[${socket.userdata.id}] getSeats for ${channel}`);
+
+        if (!(channel in channels)) {
+            console.log(`[${socket.id}] ERROR: not in ${channel}`);
+            return;
+        }
+
+        socket.emit('seatsChanged', { 'seats': invitedUsers[channel] });
+    });
+
+    socket.on('getUsers', function (config) {
+        console.log("GetUsers event called");
+        var channel = config.channel;
+        console.log(`[${socket.userdata.id}] getUsers for ${channel}`);
+
+        if (!(channel in channels)) {
+            console.log(`[${socket.id}] ERROR: not in ${channel}`);
+            return;
+        }
+        const users = Object.values(channels[channel]).map(socket => socket.userdata);
+        console.log("users:", users);
+        socket.emit('receiveUsers', { 'users': users });
+    });
+
     function part(channel) {
         console.log("Part event called");
         console.log("[" + socket.id + "] part ");
@@ -232,6 +290,12 @@ io.sockets.on('connection', function (socket) {
 
         delete socket.channels[channel];
         delete channels[channel][socket.id];
+        if (invitedUsers[channel] && socket.userdata.id in invitedUsers[channel]) {
+            console.log(`Removing user ${socket.userdata.id} from his seat`);
+            invitedUsers[channel][invitedUsers[channel].indexOf(socket.userdata.id)] = null;
+        } else {
+            console.log(`User ${socket.userdata.id} was not on any seat`);
+        }
 
         for (id in channels[channel]) {
             channels[channel][id].emit('removePeer', { 'peer_id': socket.id });
@@ -241,6 +305,7 @@ io.sockets.on('connection', function (socket) {
         if (Object.keys(channels[channel]).length === 0) {
             console.log("Deleting room ", channel, " for it is empty");
             delete channels[channel];
+            delete invitedUsers[channel];
         }
     }
     socket.on('part', part);
@@ -267,7 +332,7 @@ io.sockets.on('connection', function (socket) {
         if (data.data)
             console.log("' a data: ", data.data);
         for (id in channels[ch]) {
-            channels[ch][id].emit('broadcastMsg', { 'peer_id': socket.id, 'message': msg, 'userData': socket.userdata, 'data': data });
+            channels[ch][id].emit('broadcastMsg', { 'peer_id': socket.id, 'message': msg, 'userdata': socket.userdata, 'data': data });
         }
     });
 

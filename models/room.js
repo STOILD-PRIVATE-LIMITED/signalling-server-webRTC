@@ -12,8 +12,7 @@ const roomSchema = new mongoose.Schema({
     roomType: Number,
     name: String,
     imgUrl: { type: String, default: null },
-    announcement: { type: String, default: null },
-    seatUsers: { type: [String], default: null },
+    announcement: { type: String, default: null }
 }, {
     timestamps: true,
 });
