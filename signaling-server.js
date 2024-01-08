@@ -325,14 +325,14 @@ io.sockets.on('connection', function (socket) {
         // expected input {'channel': roomName, 'message': message}
         ch = data.channel;
         msg = data.message;
-        data = data.data;
+        const data2 = data.data;
         console.log("[" + socket.id + "] broadcasting on channel '", ch);
-        if (data.message)
+        if (data['message'])
             console.log("' a message: ", data.message);
-        if (data.data)
-            console.log("' a data: ", data.data);
+        if (data2)
+            console.log("' a data: ", data2);
         for (id in channels[ch]) {
-            channels[ch][id].emit('broadcastMsg', { 'peer_id': socket.id, 'message': msg, 'userdata': socket.userdata, 'data': data });
+            channels[ch][id].emit('broadcastMsg', { 'peer_id': socket.id, 'message': msg, 'userdata': socket.userdata, 'data': data2 });
         }
     });
 
