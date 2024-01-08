@@ -299,6 +299,8 @@ io.sockets.on('connection', function (socket) {
 
         for (id in channels[channel]) {
             channels[channel][id].emit('removePeer', { 'peer_id': socket.id });
+            channels[channel][id].emit('seatsChanged', { 'seats': invitedUsers[channel] });
+            socket.emit('seatsChanged', { 'seats': invitedUsers[channel] });
             socket.emit('removePeer', { 'peer_id': id });
         }
 
