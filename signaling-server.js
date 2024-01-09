@@ -290,7 +290,7 @@ io.sockets.on('connection', function (socket) {
 
         delete socket.channels[channel];
         delete channels[channel][socket.id];
-        if (invitedUsers[channel] && socket.userdata.id in invitedUsers[channel]) {
+        if (invitedUsers[channel] && invitedUsers[channel].includes(socket.userdata.id)) {
             console.log(`Removing user ${socket.userdata.id} from his seat`);
             invitedUsers[channel][invitedUsers[channel].indexOf(socket.userdata.id)] = null;
         } else {
