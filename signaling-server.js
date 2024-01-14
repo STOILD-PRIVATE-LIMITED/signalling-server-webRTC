@@ -229,7 +229,7 @@ io.sockets.on('connection', function (socket) {
         var channel = config.channel;
         var userId = config.userId;
         var seat = config.seat;
-        console.log(`[${socket.userdata.id}] invite ${userId} to join ${channel} on seat ${seat}`);
+        // console.log(`[${socket.userdata.id}] invite ${userId} to join ${channel} on seat ${seat}`);
 
         if (!(channel in channels)) {
             console.log(`[${socket.id}] ERROR: not in ${channel}`);
@@ -255,7 +255,7 @@ io.sockets.on('connection', function (socket) {
     socket.on('getSeats', function (config) {
         console.log("GetSeats event called");
         var channel = config.channel;
-        console.log(`[${socket.userdata.id}] getSeats for ${channel}`);
+        // console.log(`[${socket.userdata.id}] getSeats for ${channel}`);
 
         if (!(channel in channels)) {
             console.log(`[${socket.id}] ERROR: not in ${channel}`);
@@ -268,7 +268,7 @@ io.sockets.on('connection', function (socket) {
     socket.on('getUsers', function (config) {
         console.log("GetUsers event called");
         var channel = config.channel;
-        console.log(`[${socket.userdata.id}] getUsers for ${channel}`);
+        // console.log(`[${socket.userdata.id}] getUsers for ${channel}`);
 
         if (!(channel in channels)) {
             console.log(`[${socket.id}] ERROR: not in ${channel}`);
