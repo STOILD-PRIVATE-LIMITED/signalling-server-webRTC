@@ -134,9 +134,6 @@ server.listen(port, null, function () {
 app.get('/', function (req, res) { res.sendFile(__dirname + '/client.html'); });
 
 
-/*************************/
-/*** INTERESTING STUFF ***/
-/*************************/
 var channels = {};
 var sockets = {};
 var invitedUsers = {};  // {channel: [user1, user2, ...]}
