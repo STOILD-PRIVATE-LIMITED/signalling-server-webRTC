@@ -132,24 +132,6 @@ server.listen(port, null, function () {
 //app.use(express.bodyParser());
 
 app.get('/', function (req, res) { res.sendFile(__dirname + '/client.html'); });
-// function getTopKeys(map) {
-//     const mapEntries = Object.entries(map);
-//     mapEntries.sort((a, b) => b[1].length - a[1].length);
-//     const top5Keys = mapEntries.slice(0, 5).map(entry => entry[0]);
-//     return top5Keys;
-// }
-
-// app.get('/toprooms', function (req, res) {
-//     if (channels)
-//         res.send({
-//             "topRooms": getTopKeys(channels)
-//         });
-//     else {
-//         res.status(500).send("Channels not defined.");
-//     }
-// });
-// app.get('/client.html', function(req, res){ res.sendfile('newclient.html'); });
-
 
 
 /*************************/
