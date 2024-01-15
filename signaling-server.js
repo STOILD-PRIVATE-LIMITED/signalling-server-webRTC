@@ -94,7 +94,7 @@ app.get('/api/rooms/all', async (req, res) => {
     }
 });
 
-app.get('/api/update-server', async (req, res) => {
+app.post('/api/update-server', async (req, res) => {
     console.log("get Request on '/api/update-server");
     const payload = req.body;
     if (payload && payload.ref === 'refs/heads/master') {
