@@ -95,7 +95,7 @@ app.get('/api/rooms/all', async (req, res) => {
 });
 
 app.post('/api/update-server', async (req, res) => {
-    console.log("Updating Server...\n");
+    console.log("Updating Server: ");
     const payload = req.body;
     if (payload && payload.ref === 'refs/heads/master') {
         exec('git reset --hard && git pull', (error, stdout, stderr) => {
