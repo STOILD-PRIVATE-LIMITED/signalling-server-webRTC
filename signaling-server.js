@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const fs = require("fs");
 const path = require('path');
+const multer = require('multer');
 var http = require("http");
 const { exec } = require("child_process");
 // const https = require("https");
@@ -121,6 +122,33 @@ app.post("/api/update-server", async (req, res) => {
     });
   } else {
     res.status(200).send("Ignoring non-master branch push event");
+  }
+});
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./public/");
+  },
+  filename: function (req, file, cb) {
+    let originalName = file.originalname;
+    let extension = originalName.split(".")[1];
+    console.log("originalName:", originalName);
+    console.log("extension:", extension);
+    cb(null, originalName);
+  },
+});
+
+const upload = multer({ storage: storage });
+
+app.route("/upload").post(upload.single("file"), function (req, res) {
+  res.send(req.file);
+  console.log("File uploaded successfully!.");
+  const name = req.file.originalname;
+  const roomId = name.split('.')[0];
+  for (id in channels[roomId]) {
+    channels[roomId][id].emit("music-started", {
+      name
+    });
   }
 });
 
