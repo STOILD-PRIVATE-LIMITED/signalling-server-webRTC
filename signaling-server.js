@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const fs = require("fs");
+const path = require('path');
 var http = require("http");
 const { exec } = require("child_process");
 // const https = require("https");
@@ -8,6 +9,8 @@ const { channel } = require("diagnostics_channel");
 var giftTimerDetails = {};
 
 const app = express();
+// app.use(express.static('public'));
+app.use('/static', express.static(path.join(__dirname, 'public')));
 const port = 8080;
 
 app.use(bodyParser.json());
@@ -130,6 +133,15 @@ app.post("/api/update-server", async (req, res) => {
 // const credentials = { key: privateKey, cert: certificate };
 // const server = https.createServer(credentials, app);
 const server = http.createServer(app);
+
+// Music Streaming
+// const musicFile = path.join(__dirname, 'music.mp3'); // Replace with your music file path
+
+// server.on('request', (req, res) => {
+//   console.log("Streaming Music...");
+//   const stream = fs.createReadStream(musicFile);
+//   stream.pipe(res);
+// });
 
 const io = require("socket.io")(server);
 //io.set('log level', 2);
