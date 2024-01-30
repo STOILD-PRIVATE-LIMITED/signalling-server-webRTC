@@ -1,8 +1,8 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const fs = require("fs");
-const path = require('path');
-const multer = require('multer');
+const path = require("path");
+const multer = require("multer");
 var http = require("http");
 const { exec } = require("child_process");
 // const https = require("https");
@@ -11,7 +11,7 @@ var giftTimerDetails = {};
 
 const app = express();
 // app.use(express.static('public'));
-app.use('/static', express.static(path.join(__dirname, 'public')));
+app.use("/static", express.static(path.join(__dirname, "public")));
 const port = 8080;
 
 app.use(bodyParser.json());
@@ -144,10 +144,10 @@ app.route("/upload").post(upload.single("file"), function (req, res) {
   res.send(req.file);
   console.log("File uploaded successfully!.");
   const name = req.file.originalname;
-  const roomId = name.split('.')[0];
+  const roomId = name.split(".")[0];
   for (id in channels[roomId]) {
     channels[roomId][id].emit("music-started", {
-      name
+      name,
     });
   }
 });
@@ -247,10 +247,10 @@ io.sockets.on("connection", function (socket) {
     for (id in channels[channel]) {
       console.log(
         "New User [" +
-        socket.id +
-        "] Informing Old User [" +
-        id +
-        "] to addPeer"
+          socket.id +
+          "] Informing Old User [" +
+          id +
+          "] to addPeer"
       );
       channels[channel][id].emit("addPeer", {
         peer_id: socket.id,
@@ -259,10 +259,10 @@ io.sockets.on("connection", function (socket) {
       });
       console.log(
         "New User [" +
-        socket.id +
-        "] Being Informed about Old User [" +
-        id +
-        "] to addPeer"
+          socket.id +
+          "] Being Informed about Old User [" +
+          id +
+          "] to addPeer"
       );
       socket.emit("addPeer", {
         peer_id: id,
@@ -438,11 +438,15 @@ io.sockets.on("connection", function (socket) {
   socket.on("timer", (data) => {
     console.log("Timer event called:", data);
     const { timerCount, roomId } = data;
-    giftTimerDetails[roomId] = { isRunning: true, startedTime: new Date(), duration: timerCount };
+    giftTimerDetails[roomId] = {
+      isRunning: true,
+      startedTime: new Date(),
+      duration: timerCount,
+    };
     setTimeout(() => {
       console.log("Timer completed.");
       giftTimerDetails[roomId] = { isRunning: false };
-      emitTimerStart(roomId);
+      // emitTimerStart(roomId);
     }, timerCount);
     emitTimerStart(roomId);
   });
@@ -471,8 +475,41 @@ io.sockets.on("connection", function (socket) {
     for (id in channels[channel]) {
       channels[channel][id].emit("music-started", audio);
     }
-  })
+  });
+
+  socket.on("left-room", (data) => {
+    const { roomId, userId } = data;
+    UserGifts[userId] = 0;
+    for (id in channels[roomId]) {
+      channels[roomId][id].emit("giftsUpdated", UserGifts);
+    }
+  });
 });
+
+socket.on("stop-timer", (roomId) => {
+  giftTimerDetails[roomId] = { isRunning: false };
+  for (x in UserGifts) {
+    UserGifts[x] = 0;
+  }
+  for (id in channels[roomId]) {
+    channels[roomId][id].emit("giftsUpdated", UserGifts);
+    channels[roomId][id].emit("timerStoped");
+  }
+});
+
+//
+// socket.on("disconnect", () => {
+//   let userRoom;
+//   for (room in channels) {
+//     if (socket.id in room) {
+//       userRoom = room;
+//     }
+//   }
+//   UserGifts[]
+//   for (id in channels[userRoom]) {
+//     channels[userRoom][id].emit("giftsUpdated", UserGifts);
+//   }
+// });
 
 function emitTimerStart(roomId) {
   for (id in channels[roomId]) {
@@ -485,7 +522,5 @@ function emitTimerStartToSocket(id, roomId) {
     startTime: giftTimerDetails[roomId].startedTime,
     duration: giftTimerDetails[roomId].duration,
   });
-  channels[roomId][id].emit("giftsUpdated",
-    UserGifts
-  );
+  channels[roomId][id].emit("giftsUpdated", UserGifts);
 }
