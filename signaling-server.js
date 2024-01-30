@@ -141,7 +141,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.route("/upload").post(upload.single("file"), function (req, res) {
-  if()
+  
   res.send(req.file);
   console.log("File uploaded successfully!.");
   const name = req.file.originalname;
@@ -516,6 +516,7 @@ io.sockets.on("connection", function (socket) {
       channels[roomId][id].emit("timerStoped");
     }
   });
+
 });
 
 
