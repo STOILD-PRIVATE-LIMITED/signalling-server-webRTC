@@ -216,16 +216,16 @@ io.sockets.on("connection", function (socket) {
     }
     console.log("[" + socket.id + "] disconnected");
     delete sockets[socket.id];
-      let userRoom;
-      for (room in channels) {
-        if (socket.id in room) {
-          userRoom = room;
-        }
+    let userRoom;
+    for (room in channels) {
+      if (socket.id in room) {
+        userRoom = room;
       }
-      UserGifts[socketUserIds[socket.id]]=0;
-      for (id in channels[userRoom]) {
-        channels[userRoom][id].emit("giftsUpdated", UserGifts);
-      }
+    }
+    UserGifts[userRoom][socketUserIds[socket.id]] = 0;
+    for (id in channels[userRoom]) {
+      channels[userRoom][id].emit("giftsUpdated", UserGifts[userRoom]);
+    }
   });
 
   socket.on("join", function (config) {
@@ -469,11 +469,17 @@ io.sockets.on("connection", function (socket) {
   socket.on("sendGift", (data) => {
     const { userId, diamonds, roomId } = data;
     if (giftTimerDetails[roomId].isRunning) {
-      if (userId in UserGifts) {
-        UserGifts[userId] = UserGifts[userId] + diamonds;
+      if (roomId in UserGifts) {
+        if (userId in UserGifts[roomId]) {
+          UserGifts[roomId][userId] = UserGifts[roomId][userId] + diamonds;
+        } else {
+          UserGifts[roomId][userId] = diamonds;
+        }
       } else {
-        UserGifts[userId] = diamonds;
+        UserGifts[roomId] = {};
+        UserGifts[roomId][userId] = diamonds;
       }
+
       for (id in channels[roomId]) {
         emitTimerStartToSocket(id, roomId);
       }
@@ -494,20 +500,20 @@ io.sockets.on("connection", function (socket) {
 
   socket.on("left-room", (data) => {
     const { roomId, userId } = data;
-    UserGifts[userId] = 0;
+    UserGifts[roomId][userId] = 0;
     for (id in channels[roomId]) {
-      channels[roomId][id].emit("giftsUpdated", UserGifts);
+      channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
     }
   });
 });
 
 socket.on("stop-timer", (roomId) => {
   giftTimerDetails[roomId] = { isRunning: false };
-  for (x in UserGifts) {
-    UserGifts[x] = 0;
+  for (x in UserGifts[roomId]) {
+    UserGifts[roomId][x] = 0;
   }
   for (id in channels[roomId]) {
-    channels[roomId][id].emit("giftsUpdated", UserGifts);
+    channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
     channels[roomId][id].emit("timerStoped");
   }
 });
@@ -537,5 +543,5 @@ function emitTimerStartToSocket(id, roomId) {
     startTime: giftTimerDetails[roomId].startedTime,
     duration: giftTimerDetails[roomId].duration,
   });
-  channels[roomId][id].emit("giftsUpdated", UserGifts);
+  channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
 }
