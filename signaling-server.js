@@ -468,17 +468,17 @@ io.sockets.on("connection", function (socket) {
   });
 
   socket.on("sendGift", (data) => {
-    const { userId, diamonds, roomId } = data;
+    const { userId, diamonds, roomId,quantity } = data;
     if (giftTimerDetails[roomId].isRunning) {
       if (roomId in UserGifts) {
         if (userId in UserGifts[roomId]) {
-          UserGifts[roomId][userId] = UserGifts[roomId][userId] + diamonds;
+          UserGifts[roomId][userId] = UserGifts[roomId][userId] + diamonds*quantity;
         } else {
-          UserGifts[roomId][userId] = diamonds;
+          UserGifts[roomId][userId] = diamonds*quantity;
         }
       } else {
         UserGifts[roomId] = {};
-        UserGifts[roomId][userId] = diamonds;
+        UserGifts[roomId][userId] = diamonds*quantity;
       }
 
       for (id in channels[roomId]) {
