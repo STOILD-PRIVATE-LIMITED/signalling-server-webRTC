@@ -141,6 +141,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.route("/upload").post(upload.single("file"), function (req, res) {
+  if()
   res.send(req.file);
   console.log("File uploaded successfully!.");
   const name = req.file.originalname;
@@ -505,18 +506,19 @@ io.sockets.on("connection", function (socket) {
       channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
     }
   });
+  socket.on("stop-timer", (roomId) => {
+    giftTimerDetails[roomId] = { isRunning: false };
+    for (x in UserGifts[roomId]) {
+      UserGifts[roomId][x] = 0;
+    }
+    for (id in channels[roomId]) {
+      channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
+      channels[roomId][id].emit("timerStoped");
+    }
+  });
 });
 
-socket.on("stop-timer", (roomId) => {
-  giftTimerDetails[roomId] = { isRunning: false };
-  for (x in UserGifts[roomId]) {
-    UserGifts[roomId][x] = 0;
-  }
-  for (id in channels[roomId]) {
-    channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
-    channels[roomId][id].emit("timerStoped");
-  }
-});
+
 
 //
 // socket.on("disconnect", () => {
