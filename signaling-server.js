@@ -187,6 +187,7 @@ var channels = {};
 var sockets = {};
 var invitedUsers = {}; // {channel: [user1, user2, ...]}
 var UserGifts = {};
+var socketUserIds = {};
 /**
  * Users will connect to the signaling server, after which they'll issue a "join"
  * to join a particular channel. The signaling server keeps track of all sockets
@@ -204,6 +205,10 @@ io.sockets.on("connection", function (socket) {
 
   console.log("[" + socket.id + "] connection accepted");
 
+  socket.on("connected", (userId) => {
+    socketUserIds[socket.id] = userId;
+  });
+
   socket.on("disconnect", function () {
     console.log("Disconnect event called");
     for (var channel in socket.channels) {
@@ -211,6 +216,16 @@ io.sockets.on("connection", function (socket) {
     }
     console.log("[" + socket.id + "] disconnected");
     delete sockets[socket.id];
+      let userRoom;
+      for (room in channels) {
+        if (socket.id in room) {
+          userRoom = room;
+        }
+      }
+      UserGifts[socketUserIds[socket.id]]=0;
+      for (id in channels[userRoom]) {
+        channels[userRoom][id].emit("giftsUpdated", UserGifts);
+      }
   });
 
   socket.on("join", function (config) {
