@@ -223,7 +223,7 @@ io.sockets.on("connection", function (socket) {
         userRoom = room;
       }
     }
-    if (UserGifts[userRoom] && UserGifts[userRoom][socketUserIds[socket.id]])
+    if (UserGifts[userRoom])
       UserGifts[userRoom][socketUserIds[socket.id]] = 0;
     for (id in channels[userRoom]) {
       channels[userRoom][id].emit("giftsUpdated", UserGifts[userRoom]);
@@ -470,6 +470,7 @@ io.sockets.on("connection", function (socket) {
 
   socket.on("sendGift", (data) => {
     const { userId, diamonds, roomId, quantity } = data;
+    console.log("userId");
     if (giftTimerDetails[roomId].isRunning) {
       if (roomId in UserGifts) {
         if (userId in UserGifts[roomId]) {
