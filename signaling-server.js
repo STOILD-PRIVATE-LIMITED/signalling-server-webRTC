@@ -223,7 +223,7 @@ io.sockets.on("connection", function (socket) {
         userRoom = room;
       }
     }
-    if (UserGifts[userRoom][socketUserIds[socket.id]])
+    if (UserGifts[userRoom] && UserGifts[userRoom][socketUserIds[socket.id]])
       UserGifts[userRoom][socketUserIds[socket.id]] = 0;
     for (id in channels[userRoom]) {
       channels[userRoom][id].emit("giftsUpdated", UserGifts[userRoom]);
