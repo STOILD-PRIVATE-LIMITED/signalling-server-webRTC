@@ -141,7 +141,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.route("/upload").post(upload.single("file"), function (req, res) {
-  
+
   res.send(req.file);
   console.log("File uploaded successfully!.");
   const name = req.file.originalname;
@@ -263,10 +263,10 @@ io.sockets.on("connection", function (socket) {
     for (id in channels[channel]) {
       console.log(
         "New User [" +
-          socket.id +
-          "] Informing Old User [" +
-          id +
-          "] to addPeer"
+        socket.id +
+        "] Informing Old User [" +
+        id +
+        "] to addPeer"
       );
       channels[channel][id].emit("addPeer", {
         peer_id: socket.id,
@@ -275,10 +275,10 @@ io.sockets.on("connection", function (socket) {
       });
       console.log(
         "New User [" +
-          socket.id +
-          "] Being Informed about Old User [" +
-          id +
-          "] to addPeer"
+        socket.id +
+        "] Being Informed about Old User [" +
+        id +
+        "] to addPeer"
       );
       socket.emit("addPeer", {
         peer_id: id,
@@ -468,17 +468,17 @@ io.sockets.on("connection", function (socket) {
   });
 
   socket.on("sendGift", (data) => {
-    const { userId, diamonds, roomId,quantity } = data;
+    const { userId, diamonds, roomId, quantity } = data;
     if (giftTimerDetails[roomId].isRunning) {
       if (roomId in UserGifts) {
         if (userId in UserGifts[roomId]) {
-          UserGifts[roomId][userId] = UserGifts[roomId][userId] + diamonds*quantity;
+          UserGifts[roomId][userId] = UserGifts[roomId][userId] + diamonds * quantity;
         } else {
-          UserGifts[roomId][userId] = diamonds*quantity;
+          UserGifts[roomId][userId] = diamonds * quantity;
         }
       } else {
         UserGifts[roomId] = {};
-        UserGifts[roomId][userId] = diamonds*quantity;
+        UserGifts[roomId][userId] = diamonds * quantity;
       }
 
       for (id in channels[roomId]) {
@@ -506,7 +506,9 @@ io.sockets.on("connection", function (socket) {
       channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
     }
   });
-  socket.on("stop-timer", (roomId) => {
+
+  socket.on("stop-timer", (data) => {
+    const { roomId } = data;
     giftTimerDetails[roomId] = { isRunning: false };
     for (x in UserGifts[roomId]) {
       UserGifts[roomId][x] = 0;
