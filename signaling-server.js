@@ -127,7 +127,19 @@ app.post("/api/update-server", async (req, res) => {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "./public/");
+    console.log("query = ", req.query);
+    console.log("file = ", file)
+    folder = req.query.folder;
+    folder = `./public/${folder}`
+    try {
+      if (!fs.existsSync(folder)) {
+        fs.mkdirSync(folder);
+        console.log(`Folder '${folder}' Created Successfully.`);
+      }
+    } catch (err) {
+      console.error("Unable to create folder:", err);
+    }
+    cb(null, folder);
   },
   filename: function (req, file, cb) {
     let originalName = file.originalname;
@@ -141,16 +153,38 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.route("/upload").post(upload.single("file"), function (req, res) {
-
   res.send(req.file);
   console.log("File uploaded successfully!.");
   const name = req.file.originalname;
-  const roomId = name.split(".")[0];
+  const folder = req.query.folder;
+  const roomId = folder;
+  console.log("Emitting music-started with file name:", name, "to room:", roomId);
   for (id in channels[roomId]) {
     channels[roomId][id].emit("music-started", {
-      name,
+      'fileName': name,
     });
   }
+});
+
+app.get("/api/playlist", async (req, res) => {
+  const { roomId } = req.query;
+  const folder = "./public/" + roomId;
+  if (!fs.existsSync(folder)) {
+    fs.mkdirSync(folder);
+    console.log(`Folder '${folder}' Created Successfully.`);
+  }
+  fs.readdir(folder, (err, files) => {
+    if (err) {
+      res.status(500).json({
+        err,
+      })
+    } else {
+      res.json({
+        err,
+        files,
+      });
+    }
+  });
 });
 
 // const server = http.createServer(app)
@@ -461,9 +495,7 @@ io.sockets.on("connection", function (socket) {
       duration: timerCount,
     };
     setTimeout(() => {
-      console.log("Timer completed.");
-      giftTimerDetails[roomId] = { isRunning: false };
-      // emitTimerStart(roomId);
+      stopTimer({ roomId: roomId });
     }, timerCount);
     emitTimerStart(roomId);
   });
@@ -501,29 +533,18 @@ io.sockets.on("connection", function (socket) {
     }
   });
 
-  socket.on("left-room", (data) => {
-    const { roomId, userId } = data;
-    UserGifts[roomId][userId] = 0;
-    for (id in channels[roomId]) {
-      channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
-    }
-  });
+  // socket.on("left-room", (data) => {
+  //   const { roomId, userId } = data;
+  //   UserGifts[roomId][userId] = 0;
+  //   for (id in channels[roomId]) {
+  //     channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
+  //   }
+  // });
 
   socket.on("stop-timer", (data) => {
-    const { roomId } = data;
-    giftTimerDetails[roomId] = { isRunning: false };
-    for (x in UserGifts[roomId]) {
-      UserGifts[roomId][x] = 0;
-    }
-    for (id in channels[roomId]) {
-      channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
-      channels[roomId][id].emit("timerStoped");
-    }
+    stopTimer(data)
   });
-
 });
-
-
 
 //
 // socket.on("disconnect", () => {
@@ -538,6 +559,22 @@ io.sockets.on("connection", function (socket) {
 //     channels[userRoom][id].emit("giftsUpdated", UserGifts);
 //   }
 // });
+
+function stopTimer(data) {
+  console.log("Timer completed.");
+  const { roomId } = data;
+  if (giftTimerDetails[roomId] && giftTimerDetails[roomId] == false) {
+    return;
+  }
+  giftTimerDetails[roomId] = { isRunning: false };
+  for (x in UserGifts[roomId]) {
+    UserGifts[roomId][x] = 0;
+  }
+  for (id in channels[roomId]) {
+    channels[roomId][id].emit("giftsUpdated", UserGifts[roomId]);
+    channels[roomId][id].emit("timerStoped");
+  }
+}
 
 function emitTimerStart(roomId) {
   for (id in channels[roomId]) {
