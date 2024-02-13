@@ -121,6 +121,7 @@ async function next(req, res) {
         console.log("All Good!");
         res.send(musicData);
     } catch (e) {
+        console.error(e);
         res.status(400).json({
             error: e
         });
