@@ -3,10 +3,21 @@ const bodyParser = require("body-parser");
 const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
-var http = require("http");
+// var http = require("http");
 const { exec } = require("child_process");
-// const https = require("https");
+const https = require("https");
 const { channel } = require("diagnostics_channel");
+const { MusicData } = require('./models/music_data');
+const { getSongDuration,
+  getMusicData,
+  play,
+  pause,
+  next,
+  previous,
+  changeSong,
+  addSong,
+  seek,
+  getPlaylist, } = require('./src/controllers/music.js')
 var giftTimerDetails = {};
 
 const app = express();
@@ -21,7 +32,7 @@ const { generateUniqueRoomId } = require("./utils");
 
 // Get rooms
 app.get("/api/rooms", async (req, res) => {
-  console.log("get Request on '/api/rooms'");
+  // // console.log("get Request on '/api/rooms'");
   const { id, userId } = req.query;
   try {
     let roomData;
@@ -41,7 +52,7 @@ app.get("/api/rooms", async (req, res) => {
 
 // Create a new room
 app.post("/api/rooms", async (req, res) => {
-  console.log("post Request on ('/api/rooms')");
+  // // console.log("post Request on ('/api/rooms')");
   let roomData = req.body;
   const { admin } = roomData;
   try {
@@ -63,12 +74,12 @@ app.post("/api/rooms", async (req, res) => {
 
 // Update an existing room
 app.post("/api/update-room", async (req, res) => {
-  console.log("post Request on '/api/update-room',");
+  // // console.log("post Request on '/api/update-room',");
   const { admin } = req.body;
   try {
     const existingRoom = await Room.findOne({ admin: admin });
     if (!existingRoom) {
-      console.log("Room not found with admin:", admin);
+      // // console.log("Room not found with admin:", admin);
       return res.status(404).json({ error: "Room not found" });
     }
     await existingRoom.updateOne(req.body);
@@ -79,7 +90,7 @@ app.post("/api/update-room", async (req, res) => {
 });
 
 app.get("/api/rooms/all", async (req, res) => {
-  console.log("get Request on '/api/rooms/all");
+  // // console.log("get Request on '/api/rooms/all");
   try {
     const rooms = Object.keys(channels).map((channel) => ({
       channelId: channel,
@@ -96,7 +107,7 @@ app.get("/api/rooms/all", async (req, res) => {
         return roomData;
       })
     );
-    console.log("paginatedRooms", detailedRooms);
+    // // console.log("paginatedRooms", detailedRooms);
     res.status(200).json(detailedRooms);
   } catch (error) {
     console.error("Error fetching rooms:", error);
@@ -105,7 +116,7 @@ app.get("/api/rooms/all", async (req, res) => {
 });
 
 app.post("/api/update-server", async (req, res) => {
-  console.log("Updating Server: ");
+  // // console.log("Updating Server: ");
   const payload = req.body;
   if (
     (payload && payload.force && payload.force == true) ||
@@ -117,7 +128,7 @@ app.post("/api/update-server", async (req, res) => {
         res.status(500).send("Internal Server Error");
         return;
       }
-      console.log(`Git Pull Successful: ${stdout}`);
+      // // console.log(`Git Pull Successful: ${stdout}`);
       res.status(200).send("Server Updated Successfully");
     });
   } else {
@@ -127,14 +138,14 @@ app.post("/api/update-server", async (req, res) => {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    console.log("query = ", req.query);
-    console.log("file = ", file)
+    // console.log("query = ", req.query);
+    // console.log("file = ", file)
     folder = req.query.folder;
     folder = `./public/${folder}`
     try {
       if (!fs.existsSync(folder)) {
         fs.mkdirSync(folder);
-        console.log(`Folder '${folder}' Created Successfully.`);
+        // console.log(`Folder '${folder}' Created Successfully.`);
       }
     } catch (err) {
       console.error("Unable to create folder:", err);
@@ -142,10 +153,10 @@ const storage = multer.diskStorage({
     cb(null, folder);
   },
   filename: function (req, file, cb) {
-    let originalName = file.originalname;
+    let originalName = file.originalname.replace(/ /g, "_");
     let extension = originalName.split(".")[1];
-    console.log("originalName:", originalName);
-    console.log("extension:", extension);
+    // console.log("originalName:", originalName);
+    // console.log("extension:", extension);
     cb(null, originalName);
   },
 });
@@ -154,57 +165,87 @@ const upload = multer({ storage: storage });
 
 app.route("/upload").post(upload.single("file"), function (req, res) {
   res.send(req.file);
-  console.log("File uploaded successfully!.");
+  // console.log("File uploaded successfully!.");
   const name = req.file.originalname;
   const folder = req.query.folder;
   const roomId = folder;
-  console.log("Emitting music-started with file name:", name, "to room:", roomId);
-  for (id in channels[roomId]) {
-    channels[roomId][id].emit("music-started", {
-      'fileName': name,
-    });
-  }
+  // updating the playlist of roomId with this song name
+  MusicData.findOneAndUpdate({ roomId: roomId }, { $push: { playlist: name } }, { new: true, upsert: true }).then((data) => {
+    // console.log("Playlist updated successfully:", data);
+  }).catch((err) => {
+    console.error("Error updating playlist:", err);
+  });
+  // console.log("Emitting music-started with file name:", name, "to room:", roomId);
+  emitMusicChange(roomId);
 });
+
+async function emitMusicChange(roomId) {
+  const musicData = await MusicData.findOne({ roomId: roomId });
+  for (id in channels[roomId]) {
+    channels[roomId][id].emit("music-started", musicData);
+  }
+}
 
 app.get("/api/playlist", async (req, res) => {
-  const { roomId } = req.query;
-  const folder = "./public/" + roomId;
-  if (!fs.existsSync(folder)) {
-    fs.mkdirSync(folder);
-    console.log(`Folder '${folder}' Created Successfully.`);
+  try {
+    const files = await getPlaylist(req.query.roomId);
+    res.status(500).json({
+      err,
+      files
+    });
   }
-  fs.readdir(folder, (err, files) => {
-    if (err) {
-      res.status(500).json({
-        err,
-      })
-    } else {
-      res.json({
-        err,
-        files,
-      });
-    }
-  });
+  catch (e) {
+    res.status(500).json({
+      err: e
+    })
+  }
 });
 
-// const server = http.createServer(app)
-
-// let privateKey, certificate;
-
-// privateKey = fs.readFileSync("ssl/server-key.pem", "utf8");
-// certificate = fs.readFileSync("ssl/server-cert.pem", "utf8");
-// const credentials = { key: privateKey, cert: certificate };
-// const server = https.createServer(credentials, app);
-const server = http.createServer(app);
-
-// Music Streaming
-// const musicFile = path.join(__dirname, 'music.mp3'); // Replace with your music file path
-
-// server.on('request', (req, res) => {
-//   console.log("Streaming Music...");
-//   const stream = fs.createReadStream(musicFile);
-//   stream.pipe(res);
+app.post("/api/play", async (req, res) => {
+  await play(req, res);
+  emitMusicChange(req.body.roomId);
+});
+app.post("/api/pause", async (req, res) => {
+  await pause(req, res);
+  emitMusicChange(req.body.roomId);
+});
+app.post("/api/next", async (req, res) => {
+  await next(req, res);
+  emitMusicChange(req.body.roomId);
+});
+app.post("/api/previous", async (req, res) => {
+  await previous(req, res);
+  emitMusicChange(req.body.roomId);
+});
+app.post("/api/change-song", async (req, res) => {
+  await changeSong(req, res);
+  emitMusicChange(req.body.roomId);
+});
+app.post("/api/add-song", async (req, res) => {
+  await addSong(req, res);
+  emitMusicChange(req.body.roomId);
+});
+app.post("/api/seek", async (req, res) => {
+  await seek(req, res);
+  emitMusicChange(req.body.roomId);
+});
+// app.post("/api/get-song-duration", async (req, res) => {
+//  await getSongDuration(req, res);
+//   emitMusicChange(req.body.roomId);
 // });
+app.post("/api/get-music-data", async (req, res) => {
+  await getMusicData(req, res);
+  emitMusicChange(req.body.roomId);
+});
+
+let privateKey, certificate;
+
+privateKey = fs.readFileSync("ssl/server-key.pem", "utf8");
+certificate = fs.readFileSync("ssl/server-cert.pem", "utf8");
+const credentials = { key: privateKey, cert: certificate };
+const server = https.createServer(credentials, app);
+
+// const server = http.createServer(app);
 
 const io = require("socket.io")(server);
 //io.set('log level', 2);
@@ -234,22 +275,22 @@ var socketUserIds = {};
  * the peer connection and will be streaming audio/video between eachother.
  */
 io.sockets.on("connection", function (socket) {
-  console.log("Connection event called");
+  // // console.log("Connection event called");
   socket.channels = {};
   sockets[socket.id] = socket;
 
-  console.log("[" + socket.id + "] connection accepted");
+  // // console.log("[" + socket.id + "] connection accepted");
 
   socket.on("connected", (userId) => {
     socketUserIds[socket.id] = userId;
   });
 
   socket.on("disconnect", function () {
-    console.log("Disconnect event called");
+    // // console.log("Disconnect event called");
     for (var channel in socket.channels) {
       part(channel);
     }
-    console.log("[" + socket.id + "] disconnected");
+    // // console.log("[" + socket.id + "] disconnected");
     delete sockets[socket.id];
     let userRoom;
     for (room in channels) {
@@ -265,25 +306,25 @@ io.sockets.on("connection", function (socket) {
   });
 
   socket.on("join", function (config) {
-    console.log("Join event called");
-    console.log("[" + socket.id + "] join ", config);
+    // // console.log("Join event called");
+    // // console.log("[" + socket.id + "] join ", config);
     var channel = config.channel;
     var userdata = config.userdata;
     socket.userdata = userdata;
 
     if (channel in socket.channels) {
-      console.log("[" + socket.id + "] ERROR: already joined ", channel);
+      // // console.log("[" + socket.id + "] ERROR: already joined ", channel);
       return;
     }
 
     if (!(channel in channels)) {
-      console.log(`Creating a new room with id: ${channel}`);
+      // // console.log(`Creating a new room with id: ${channel}`);
       // Room.findOne({ id: channel }).then((roomData) => {
       //     if (!roomData) {
-      //         console.log("Room not found");
+      //         // // console.log("Room not found");
       //         return;
       //     } else {
-      //         console.log(`updating ${roomData}`);
+      //         // // console.log(`updating ${roomData}`);
       //     }
       //     roomData.updateOne({ createdAt: new Date() });
       // });
@@ -291,30 +332,30 @@ io.sockets.on("connection", function (socket) {
       if (!(channel in giftTimerDetails)) {
         giftTimerDetails[channel] = { isRunning: false };
       }
-      console.log("Creating 8 seats.");
+      // // console.log("Creating 8 seats.");
       invitedUsers[channel] = Array(8).fill(null);
     }
 
     for (id in channels[channel]) {
-      console.log(
-        "New User [" +
-        socket.id +
-        "] Informing Old User [" +
-        id +
-        "] to addPeer"
-      );
+      // console.log(
+      //   "New User [" +
+      //   socket.id +
+      //   "] Informing Old User [" +
+      //   id +
+      //   "] to addPeer"
+      // );
       channels[channel][id].emit("addPeer", {
         peer_id: socket.id,
         should_create_offer: false,
         userdata: socket.userdata,
       });
-      console.log(
-        "New User [" +
-        socket.id +
-        "] Being Informed about Old User [" +
-        id +
-        "] to addPeer"
-      );
+      // console.log(
+      //   "New User [" +
+      //   socket.id +
+      //   "] Being Informed about Old User [" +
+      //   id +
+      //   "] to addPeer"
+      // );
       socket.emit("addPeer", {
         peer_id: id,
         should_create_offer: true,
@@ -330,29 +371,29 @@ io.sockets.on("connection", function (socket) {
   });
 
   socket.on("inviteUser", function (config) {
-    console.log("Invite event called");
+    // console.log("Invite event called");
     var channel = config.channel;
     var userId = config.userId;
     var seat = config.seat;
     // console.log(`[${socket.userdata.id}] invite ${userId} to join ${channel} on seat ${seat}`);
 
     if (!(channel in channels)) {
-      console.log(`[${socket.id}] ERROR: not in ${channel}`);
+      // console.log(`[${socket.id}] ERROR: not in ${channel}`);
       return;
     }
 
     if (invitedUsers[channel][seat]) {
-      console.log(
-        `[${socket.id}] seat ${seat} is already occupied, replacing user ${invitedUsers[channel][seat]} with ${userId}`
-      );
+      // console.log(
+      //   `[${socket.id}] seat ${seat} is already occupied, replacing user ${invitedUsers[channel][seat]} with ${userId}`
+      // );
     }
 
     if (invitedUsers[channel].indexOf(userId) !== -1) {
-      console.log(
-        `[${socket.id}] user is already on seat ${invitedUsers[channel].indexOf(
-          userId
-        )}. Moving hime to new seat ${seat}`
-      );
+      // console.log(
+      //   `[${socket.id}] user is already on seat ${invitedUsers[channel].indexOf(
+      //     userId
+      //   )}. Moving hime to new seat ${seat}`
+      // );
       invitedUsers[channel][invitedUsers[channel].indexOf(userId)] = null;
     }
 
@@ -366,12 +407,12 @@ io.sockets.on("connection", function (socket) {
   });
 
   socket.on("getSeats", function (config) {
-    console.log("GetSeats event called");
+    // // console.log("GetSeats event called");
     var channel = config.channel;
-    // console.log(`[${socket.userdata.id}] getSeats for ${channel}`);
+    // // // console.log(`[${socket.userdata.id}] getSeats for ${channel}`);
 
     if (!(channel in channels)) {
-      console.log(`[${socket.id}] ERROR: not in ${channel}`);
+      // // console.log(`[${socket.id}] ERROR: not in ${channel}`);
       return;
     }
 
@@ -379,27 +420,27 @@ io.sockets.on("connection", function (socket) {
   });
 
   socket.on("getUsers", function (config) {
-    console.log("GetUsers event called");
+    // console.log("GetUsers event called");
     var channel = config.channel;
-    // console.log(`[${socket.userdata.id}] getUsers for ${channel}`);
+    // // console.log(`[${socket.userdata.id}] getUsers for ${channel}`);
 
     if (!(channel in channels)) {
-      console.log(`[${socket.id}] ERROR: not in ${channel}`);
+      // console.log(`[${socket.id}] ERROR: not in ${channel}`);
       return;
     }
     const users = Object.values(channels[channel]).map(
       (socket) => socket.userdata
     );
-    console.log("users:", users);
+    // console.log("users:", users);
     socket.emit("receiveUsers", { users: users });
   });
 
   function part(channel) {
-    console.log("Part event called");
-    console.log("[" + socket.id + "] part ");
+    // console.log("Part event called");
+    // console.log("[" + socket.id + "] part ");
 
     if (!(channel in socket.channels)) {
-      console.log("[" + socket.id + "] ERROR: not in ", channel);
+      // console.log("[" + socket.id + "] ERROR: not in ", channel);
       return;
     }
 
@@ -409,11 +450,11 @@ io.sockets.on("connection", function (socket) {
       invitedUsers[channel] &&
       invitedUsers[channel].includes(socket.userdata.id)
     ) {
-      console.log(`Removing user ${socket.userdata.id} from his seat`);
+      // console.log(`Removing user ${socket.userdata.id} from his seat`);
       invitedUsers[channel][invitedUsers[channel].indexOf(socket.userdata.id)] =
         null;
     } else {
-      console.log(`User ${socket.userdata.id} was not on any seat`);
+      // console.log(`User ${socket.userdata.id} was not on any seat`);
     }
 
     for (id in channels[channel]) {
@@ -426,7 +467,7 @@ io.sockets.on("connection", function (socket) {
     }
 
     if (Object.keys(channels[channel]).length === 0) {
-      console.log("Deleting room ", channel, " for it is empty");
+      // console.log("Deleting room ", channel, " for it is empty");
       delete channels[channel];
       delete invitedUsers[channel];
     }
@@ -434,13 +475,13 @@ io.sockets.on("connection", function (socket) {
   socket.on("part", part);
 
   socket.on("relayICECandidate", function (config) {
-    console.log("RelayIceCandidate event called");
+    // console.log("RelayIceCandidate event called");
     var peer_id = config.peer_id;
     var ice_candidate = config.ice_candidate;
-    console.log(
-      "[" + socket.id + "] relaying ICE candidate to [" + peer_id + "] ",
-      ice_candidate
-    );
+    // console.log(
+    //   "[" + socket.id + "] relaying ICE candidate to [" + peer_id + "] ",
+    //   ice_candidate
+    // );
 
     if (peer_id in sockets) {
       sockets[peer_id].emit("iceCandidate", {
@@ -455,30 +496,30 @@ io.sockets.on("connection", function (socket) {
     ch = data.channel;
     msg = data.message;
     const data2 = data.data;
-    console.log("[" + socket.id + "] broadcasting on channel '", ch);
-    if (data["message"]) console.log("' a message: ", data.message);
-    if (data2) console.log("' a data: ", data2);
-    for (id in channels[ch]) {
-      channels[ch][id].emit("broadcastMsg", {
-        peer_id: socket.id,
-        message: msg,
-        userdata: socket.userdata,
-        data: data2,
-      });
-    }
+    // console.log("[" + socket.id + "] broadcasting on channel '", ch);
+    if (data["message"]) // console.log("' a message: ", data.message);
+      if (data2) // console.log("' a data: ", data2);
+        for (id in channels[ch]) {
+          channels[ch][id].emit("broadcastMsg", {
+            peer_id: socket.id,
+            message: msg,
+            userdata: socket.userdata,
+            data: data2,
+          });
+        }
   });
 
   socket.on("relaySessionDescription", function (config) {
-    console.log("RelaySessionDescription event called");
+    // console.log("RelaySessionDescription event called");
     var peer_id = config.peer_id;
     var session_description = config.session_description;
-    console.log(
-      "[" + socket.id + "] relaying session description to [" + peer_id + "] ",
-      session_description
-    );
+    // console.log(
+    //   "[" + socket.id + "] relaying session description to [" + peer_id + "] ",
+    //   session_description
+    // );
 
     if (peer_id in sockets) {
-      console.log(`Relaying Session Description to ${peer_id}`);
+      // console.log(`Relaying Session Description to ${peer_id}`);
       sockets[peer_id].emit("sessionDescription", {
         peer_id: socket.id,
         session_description: session_description,
@@ -487,7 +528,7 @@ io.sockets.on("connection", function (socket) {
   });
 
   socket.on("timer", (data) => {
-    console.log("Timer event called:", data);
+    // console.log("Timer event called:", data);
     const { timerCount, roomId } = data;
     giftTimerDetails[roomId] = {
       isRunning: true,
@@ -502,7 +543,7 @@ io.sockets.on("connection", function (socket) {
 
   socket.on("sendGift", (data) => {
     const { userId, diamonds, roomId, quantity } = data;
-    console.log("userId");
+    // console.log("userId");
     if (giftTimerDetails[roomId].isRunning) {
       if (roomId in UserGifts) {
         if (userId in UserGifts[roomId]) {
@@ -526,12 +567,12 @@ io.sockets.on("connection", function (socket) {
     emitTimerStartToSocket(socket.id, roomId);
   });
 
-  socket.on("music-stream", (data) => {
-    const { channel, audio } = data;
-    for (id in channels[channel]) {
-      channels[channel][id].emit("music-started", audio);
-    }
-  });
+  // socket.on("music-stream", (data) => {
+  //   const { channel, audio } = data;
+  //   for (id in channels[channel]) {
+  //     channels[channel][id].emit("music-started", audio);
+  //   }
+  // });
 
   // socket.on("left-room", (data) => {
   //   const { roomId, userId } = data;
@@ -561,7 +602,7 @@ io.sockets.on("connection", function (socket) {
 // });
 
 function stopTimer(data) {
-  console.log("Timer completed.");
+  // console.log("Timer completed.");
   const { roomId } = data;
   if (giftTimerDetails[roomId] && giftTimerDetails[roomId] == false) {
     return;
