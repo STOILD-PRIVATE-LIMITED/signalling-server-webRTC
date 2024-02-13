@@ -170,11 +170,11 @@ app.route("/upload").post(upload.single("file"), async function (req, res) {
   const folder = req.query.folder;
   const roomId = folder;
   // updating the playlist of roomId with this song name
-  await MusicData.findOneAndUpdate({ roomId: roomId }, { $push: { playlist: name } }, { new: true, upsert: true }).then((data) => {
-    // console.log("Playlist updated successfully:", data);
-  }).catch((err) => {
-    console.error("Error updating playlist:", err);
-  });
+  let musicData = await MusicData.findOne({ roomId: roomId });
+  if (musicData.playlist.indexOf(name) != -1) {
+    musicData.playlist.push(name);
+  }
+  musicData.save();
   // console.log("Emitting music-started with file name:", name, "to room:", roomId);
   emitMusicChange(roomId);
 });

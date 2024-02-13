@@ -31,6 +31,8 @@ async function getMusicData(req, res) {
                 repeat: false
             }, { upsert: true, new: true });
         }
+        musicData.playlist = await getPlaylist(roomId);
+        musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
         res.status(500).send({ message: "Cannot find music data for room:" + roomId, error: e });
@@ -155,7 +157,9 @@ async function addSong(req, res) {
     let musicData = null;
     try {
         musicData = await MusicData.findOne({ roomId: roomId });
-        musicData.playlist.push(song);
+        if (musicData.playlist.indexOf(song) != -1) {
+            musicData.playlist.push(song);
+        }
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -180,7 +184,7 @@ async function seek(req, res) {
 
 async function getPlaylist(roomId) {
     const folder = "./public/" + roomId;
-    if (!fs.existsSync(folder)) {
+    if (!(fs.existsSync(folder))) {
         fs.mkdirSync(folder);
         console.log(`Folder '${folder}' Created Successfully.`);
     }
