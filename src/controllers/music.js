@@ -5,7 +5,12 @@ const { createCipheriv } = require('crypto');
 
 async function getSongDuration(filePath) {
     console.log("getSongDuration function called.");
-    return (await getAudioDurationInSeconds(filePath)) * 1000
+    try {
+        return (await getAudioDurationInSeconds(filePath)) * 1000
+    } catch (e) {
+        console.error(e);
+        throw e;
+    }
 }
 
 async function getMusicData(req, res) {
