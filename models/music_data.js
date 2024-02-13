@@ -9,6 +9,7 @@ const musicDataSchema = new mongoose.Schema({
     playlist: [String],
     shuffle: { type: Boolean, default: false },
     repeat: { type: Boolean, default: false },
+    index: { type: Number, default: 0 },
 }, {
     timestamps: true,
 });

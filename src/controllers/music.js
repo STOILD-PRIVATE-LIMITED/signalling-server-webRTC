@@ -44,6 +44,14 @@ async function findMusicData(roomId) {
     return musicData;
 }
 
+async function setNextCallback(timeout, roomId, index) {
+    setTimeout(async () => {
+        let musicData = await findMusicData(roomId);
+        if (index != musicData.index) return;
+        await next();
+    }, timeout);
+}
+
 async function play(req, res) {
     console.log("play function called.");
     const roomId = req.body.roomId;
@@ -65,8 +73,9 @@ async function play(req, res) {
             musicData.pauseDuration = 0;
         }
         musicData.isPlaying = true;
+        musicData.index += 1;
+        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
-        // TODO: setTimeOut to call next song after song ends
         res.status(200).send(musicData);
     } catch (e) {
         res.status(500).send({ message: "Cannot find music data for room:" + roomId, error: e });
@@ -82,6 +91,8 @@ async function pause(req, res) {
         musicData.isPlaying = false;
         musicData.pauseDuration = Date.now() - musicData.startTime;
         musicData.startTime = 0;
+        musicData.index += 1;
+        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -91,27 +102,34 @@ async function pause(req, res) {
 
 async function next(req, res) {
     console.log("next function called.");
-    const roomId = req.body.roomId;
-    let musicData = null;
     try {
-        musicData = await findMusicData(roomId);
-        if (musicData.playlist.length == 0) {
-            res.status(400).send("playlist is empty");
-            return;
-        }
-        if (musicData.shuffle) {
-            musicData.currentSong = musicData.playlist[Math.floor(Math.random() * musicData.playlist.length)];
-        } else {
-            const currentIndex = musicData.playlist.indexOf(musicData.currentSong);
-            musicData.currentSong = musicData.playlist[(currentIndex + 1) % musicData.playlist.length];
-        }
-        musicData.startTime = Date.now();
-        musicData.isPlaying = true;
-        musicData.save();
-        res.status(200).send(musicData);
+        const musicData = await nextSong(req.body.roomId);
+        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        res.send(musicData);
     } catch (e) {
-        res.status(500).send({ message: "Cannot find music data for room:" + roomId });
+        res.status(400).json({
+            error: e
+        });
     }
+
+}
+
+async function nextSong(roomId) {
+    let musicData = null;
+    musicData = await findMusicData(roomId);
+    if (musicData.playlist.length == 0) {
+        throw "playlist is empty";
+    }
+    if (musicData.shuffle) {
+        musicData.currentSong = musicData.playlist[Math.floor(Math.random() * musicData.playlist.length)];
+    } else {
+        const currentIndex = musicData.playlist.indexOf(musicData.currentSong);
+        musicData.currentSong = musicData.playlist[(currentIndex + 1) % musicData.playlist.length];
+    }
+    musicData.startTime = Date.now();
+    musicData.isPlaying = true;
+    musicData.save();
+    return musicData;
 }
 
 async function previous(req, res) {
@@ -132,6 +150,8 @@ async function previous(req, res) {
         }
         musicData.startTime = Date.now();
         musicData.isPlaying = true;
+        musicData.index += 1;
+        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
         res.status(200).send(musicData);
     }
@@ -154,6 +174,8 @@ async function changeSong(req, res) {
         musicData.currentSong = song;
         musicData.startTime = Date.now();
         musicData.isPlaying = true;
+        musicData.index += 1;
+        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -186,6 +208,8 @@ async function seek(req, res) {
     try {
         musicData = await findMusicData(roomId);
         musicData.startTime = Date.now() - duration;
+        musicData.index += 1;
+        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
