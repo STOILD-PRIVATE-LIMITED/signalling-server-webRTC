@@ -25,7 +25,7 @@ async function getMusicData(req, res) {
                 roomId: roomId,
                 currentSong: playlist.length > 0 ? playlist[0] : null,
                 isPlaying: false,
-                duration: 0,
+                startTime: Date.now(),
                 playlist: playlist,
                 shuffle: false,
                 repeat: false
@@ -51,7 +51,9 @@ async function play(req, res) {
                 return;
             }
             musicData.currentSong = musicData.playlist[0];
-            musicData.duration = 0;
+            if (musicData.startTime == 0) {
+                musicData.startTime = Date.now();
+            }
         }
         musicData.isPlaying = true;
         musicData.save();
@@ -65,12 +67,10 @@ async function play(req, res) {
 async function pause(req, res) {
     console.log("pause function called.");
     const roomId = req.body.roomId;
-    const duration = req.body.duration;
     let musicData = null;
     try {
         musicData = await MusicData.findOne({ roomId: roomId });
         musicData.isPlaying = false;
-        musicData.duration = duration;
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -94,7 +94,7 @@ async function next(req, res) {
             const currentIndex = musicData.playlist.indexOf(musicData.currentSong);
             musicData.currentSong = musicData.playlist[(currentIndex + 1) % musicData.playlist.length];
         }
-        musicData.duration = 0;
+        musicData.startTime = Date.now();
         musicData.isPlaying = true;
         musicData.save();
         res.status(200).send(musicData);
@@ -119,7 +119,7 @@ async function previous(req, res) {
             const currentIndex = musicData.playlist.indexOf(musicData.currentSong);
             musicData.currentSong = musicData.playlist[(currentIndex - 1 + musicData.playlist.length) % musicData.playlist.length];
         }
-        musicData.duration = 0;
+        musicData.startTime = Date.now();
         musicData.isPlaying = true;
         musicData.save();
         res.status(200).send(musicData);
@@ -141,7 +141,7 @@ async function changeSong(req, res) {
             return;
         }
         musicData.currentSong = song;
-        musicData.duration = 0;
+        musicData.startTime = Date.now();
         musicData.isPlaying = true;
         musicData.save();
         res.status(200).send(musicData);
@@ -174,7 +174,7 @@ async function seek(req, res) {
     let musicData = null;
     try {
         musicData = await MusicData.findOne({ roomId: roomId });
-        musicData.duration = duration;
+        musicData.startTime = Date.now() - duration;
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {

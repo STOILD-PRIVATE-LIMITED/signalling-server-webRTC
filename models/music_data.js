@@ -4,7 +4,7 @@ const musicDataSchema = new mongoose.Schema({
     roomId: String,
     currentSong: String,
     isPlaying: { type: Boolean, default: false },
-    duration: { type: Number, default: 0 },
+    startTime: { type: Number, default: 0 },
     playlist: [String],
     shuffle: { type: Boolean, default: false },
     repeat: { type: Boolean, default: false },
