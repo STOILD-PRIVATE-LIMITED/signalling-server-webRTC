@@ -59,7 +59,7 @@ async function setNextCallback(timeout, roomId, index) {
     setTimeout(async () => {
         let musicData = await findMusicData(roomId);
         if (index != musicData.index) return;
-        await next();
+        await nextSong(roomId);
     }, timeout);
 }
 
