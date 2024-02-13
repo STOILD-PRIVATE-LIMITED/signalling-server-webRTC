@@ -114,8 +114,11 @@ async function pause(req, res) {
 async function next(req, res) {
     console.log("next function called.");
     try {
+        console.log("next song function is going to be called.");
         const musicData = await nextSong(req.body.roomId);
+        console.log("setNextCallback is going to be called.");
         setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        console.log("All Good!");
         res.send(musicData);
     } catch (e) {
         res.status(400).json({
@@ -139,7 +142,7 @@ async function nextSong(roomId) {
     }
     musicData.startTime = Date.now();
     musicData.isPlaying = true;
-    musicData.save();
+    await musicData.save();
     return musicData;
 }
 
