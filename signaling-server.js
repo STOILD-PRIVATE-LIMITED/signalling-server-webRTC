@@ -160,6 +160,7 @@ const storage = multer.diskStorage({
     // console.log("extension:", extension);
     cb(null, originalName);
   },
+  limits: { fileSize: 10485760 /* 10 mb */ }
 });
 
 const upload = multer({ storage: storage });
