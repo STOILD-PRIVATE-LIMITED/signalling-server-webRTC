@@ -19,6 +19,7 @@ const { getSongDuration,
   seek,
   getPlaylist,
   findMusicData, } = require('./src/controllers/music.js')
+getSongDuration("Sky.mp3", "767831");
 var giftTimerDetails = {};
 
 const app = express();
@@ -230,10 +231,6 @@ app.post("/api/seek", async (req, res) => {
   await seek(req, res);
   emitMusicChange(req.body.roomId);
 });
-// app.post("/api/get-song-duration", async (req, res) => {
-//  await getSongDuration(req, res);
-//   emitMusicChange(req.body.roomId);
-// });
 app.post("/api/get-music-data", async (req, res) => {
   await getMusicData(req, res);
   emitMusicChange(req.body.roomId);
