@@ -85,7 +85,7 @@ async function play(req, res) {
         }
         musicData.isPlaying = true;
         musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -103,7 +103,7 @@ async function pause(req, res) {
         musicData.pauseDuration = Date.now() - musicData.startTime;
         musicData.startTime = 0;
         musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -115,7 +115,7 @@ async function next(req, res) {
     console.log("next function called.");
     try {
         const musicData = await nextSong(req.body.roomId);
-        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
         res.send(musicData);
     } catch (e) {
         res.status(400).json({
@@ -162,7 +162,7 @@ async function previous(req, res) {
         musicData.startTime = Date.now();
         musicData.isPlaying = true;
         musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
         res.status(200).send(musicData);
     }
@@ -186,7 +186,7 @@ async function changeSong(req, res) {
         musicData.startTime = Date.now();
         musicData.isPlaying = true;
         musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -220,7 +220,7 @@ async function seek(req, res) {
         musicData = await findMusicData(roomId);
         musicData.startTime = Date.now() - duration;
         musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
