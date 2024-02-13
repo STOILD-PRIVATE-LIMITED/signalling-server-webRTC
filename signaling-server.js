@@ -165,8 +165,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.route("/upload").post(upload.single("file"), async function (req, res) {
-  res.send(req.file);
-  // console.log("File uploaded successfully!.");
+  res.send("File was uploaded successfully!");
+  console.log("File is being uploaded!.");
   const name = req.file.originalname;
   const folder = req.query.folder;
   const roomId = folder;
