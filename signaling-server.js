@@ -3,9 +3,9 @@ const bodyParser = require("body-parser");
 const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
-// var http = require("http");
+var http = require("http");
 const { exec } = require("child_process");
-const https = require("https");
+// const https = require("https");
 const { channel } = require("diagnostics_channel");
 const { MusicData } = require('./models/music_data');
 const { getSongDuration,
@@ -243,9 +243,9 @@ let privateKey, certificate;
 privateKey = fs.readFileSync("ssl/server-key.pem", "utf8");
 certificate = fs.readFileSync("ssl/server-cert.pem", "utf8");
 const credentials = { key: privateKey, cert: certificate };
-const server = https.createServer(credentials, app);
+// const server = https.createServer(credentials, app);
 
-// const server = http.createServer(app);
+const server = http.createServer(app);
 
 const io = require("socket.io")(server);
 //io.set('log level', 2);
