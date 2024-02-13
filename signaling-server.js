@@ -19,7 +19,6 @@ const { getSongDuration,
   seek,
   getPlaylist,
   findMusicData, } = require('./src/controllers/music.js')
-getSongDuration("Sky.mp3", "767831");
 var giftTimerDetails = {};
 
 const app = express();

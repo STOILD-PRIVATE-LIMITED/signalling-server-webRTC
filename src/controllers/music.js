@@ -8,8 +8,9 @@ async function getSongDuration(fileName, roomId) {
     console.log("getSongDuration function called.");
     let parts = __dirname.split(path.sep);
     dir = parts.slice(0, parts.length - 2).join("/");
-    console.log("dir name = ", dir);
+    console.log("dir name =", dir);
     fileName = dir + "/public/" + roomId + "/" + fileName;
+    console.log("Absolute fileName =", fileName)
     try {
         return (await getAudioDurationInSeconds(fileName)) * 1000
     } catch (e) {
