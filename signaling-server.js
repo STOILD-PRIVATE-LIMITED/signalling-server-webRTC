@@ -17,7 +17,8 @@ const { getSongDuration,
   changeSong,
   addSong,
   seek,
-  getPlaylist, } = require('./src/controllers/music.js')
+  getPlaylist,
+  findMusicData, } = require('./src/controllers/music.js')
 var giftTimerDetails = {};
 
 const app = express();
@@ -170,7 +171,7 @@ app.route("/upload").post(upload.single("file"), async function (req, res) {
   const folder = req.query.folder;
   const roomId = folder;
   // updating the playlist of roomId with this song name
-  let musicData = await MusicData.findOne({ roomId: roomId });
+  let musicData = await findMusicData(roomId);
   if (musicData.playlist.indexOf(name) != -1) {
     musicData.playlist.push(name);
   }
@@ -180,7 +181,7 @@ app.route("/upload").post(upload.single("file"), async function (req, res) {
 });
 
 async function emitMusicChange(roomId) {
-  const musicData = await MusicData.findOne({ roomId: roomId });
+  const musicData = await findMusicData(roomId);
   for (id in channels[roomId]) {
     channels[roomId][id].emit("music-started", musicData);
   }

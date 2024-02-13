@@ -14,7 +14,7 @@ async function getMusicData(req, res) {
     console.log("roomId =", roomId);
     let musicData = null;
     try {
-        musicData = await MusicData.findOne({ roomId: roomId });
+        musicData = await findMusicData(roomId);
         console.log("musicData =", musicData);
         if (musicData == null || !musicData) {
             console.log("Creating new music data.");
@@ -39,12 +39,17 @@ async function getMusicData(req, res) {
     }
 }
 
+async function findMusicData(roomId) {
+    let musicData = await MusicData.findOne({ roomId: roomId });
+    return musicData;
+}
+
 async function play(req, res) {
     console.log("play function called.");
     const roomId = req.body.roomId;
     let musicData = null;
     try {
-        musicData = await MusicData.findOne({ roomId: roomId });
+        musicData = await findMusicData(roomId);
         if (!musicData.currentSong || musicData.playlist.indexOf(musicData.currentSong) == -1) {
             if (musicData.playlist.length == 0) {
                 res.status(400).send("playlist is empty");
@@ -54,6 +59,10 @@ async function play(req, res) {
             if (musicData.startTime == 0) {
                 musicData.startTime = Date.now();
             }
+        }
+        if (musicData.pauseDuration != 0) {
+            musicData.startTime = Date.now() - musicData.pauseDuration;
+            musicData.pauseDuration = 0;
         }
         musicData.isPlaying = true;
         musicData.save();
@@ -69,8 +78,10 @@ async function pause(req, res) {
     const roomId = req.body.roomId;
     let musicData = null;
     try {
-        musicData = await MusicData.findOne({ roomId: roomId });
+        musicData = await findMusicData(roomId);
         musicData.isPlaying = false;
+        musicData.pauseDuration = Date.now() - musicData.startTime;
+        musicData.startTime = 0;
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -83,7 +94,7 @@ async function next(req, res) {
     const roomId = req.body.roomId;
     let musicData = null;
     try {
-        musicData = await MusicData.findOne({ roomId: roomId });
+        musicData = await findMusicData(roomId);
         if (musicData.playlist.length == 0) {
             res.status(400).send("playlist is empty");
             return;
@@ -108,7 +119,7 @@ async function previous(req, res) {
     const roomId = req.body.roomId;
     let musicData = null;
     try {
-        musicData = await MusicData.findOne({ roomId: roomId });
+        musicData = await findMusicData(roomId);
         if (musicData.playlist.length == 0) {
             res.status(400).send("playlist is empty");
             return;
@@ -135,7 +146,7 @@ async function changeSong(req, res) {
     const song = req.body.song;
     let musicData = null;
     try {
-        musicData = await MusicData.findOne({ roomId: roomId });
+        musicData = await findMusicData(roomId);
         if (musicData.playlist.indexOf(song) == -1) {
             res.status(400).send("song not in playlist");
             return;
@@ -156,7 +167,7 @@ async function addSong(req, res) {
     const song = req.body.song;
     let musicData = null;
     try {
-        musicData = await MusicData.findOne({ roomId: roomId });
+        musicData = await findMusicData(roomId);
         if (musicData.playlist.indexOf(song) != -1) {
             musicData.playlist.push(song);
         }
@@ -173,7 +184,7 @@ async function seek(req, res) {
     const duration = req.body.duration;
     let musicData = null;
     try {
-        musicData = await MusicData.findOne({ roomId: roomId });
+        musicData = await findMusicData(roomId);
         musicData.startTime = Date.now() - duration;
         musicData.save();
         res.status(200).send(musicData);
@@ -204,4 +215,5 @@ module.exports = {
     addSong,
     seek,
     getPlaylist,
+    findMusicData,
 };
