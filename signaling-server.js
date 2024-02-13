@@ -163,14 +163,14 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-app.route("/upload").post(upload.single("file"), function (req, res) {
+app.route("/upload").post(upload.single("file"), async function (req, res) {
   res.send(req.file);
   // console.log("File uploaded successfully!.");
   const name = req.file.originalname;
   const folder = req.query.folder;
   const roomId = folder;
   // updating the playlist of roomId with this song name
-  MusicData.findOneAndUpdate({ roomId: roomId }, { $push: { playlist: name } }, { new: true, upsert: true }).then((data) => {
+  await MusicData.findOneAndUpdate({ roomId: roomId }, { $push: { playlist: name } }, { new: true, upsert: true }).then((data) => {
     // console.log("Playlist updated successfully:", data);
   }).catch((err) => {
     console.error("Error updating playlist:", err);
