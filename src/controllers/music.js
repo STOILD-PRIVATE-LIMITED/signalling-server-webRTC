@@ -113,6 +113,7 @@ async function pause(req, res) {
 
 async function next(req, res) {
     console.log("next function called.");
+    const roomId = req.body.roomId;
     try {
         console.log("next song function is going to be called.");
         const musicData = await nextSong(req.body.roomId);
