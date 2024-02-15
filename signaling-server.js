@@ -181,6 +181,22 @@ app.route("/upload").post(upload.single("file"), async function (req, res) {
   emitMusicChange(roomId);
 });
 
+app.post("/api/remove-song", async function (req, res) {
+  const { roomId, song } = req.body;
+  const folder = `./public/${roomId}`;
+  const filePath = `${folder}/${song}`;
+  try {
+    fs.unlinkSync(filePath);
+    let musicData = await findMusicData(roomId);
+    musicData.playlist = musicData.playlist.filter((item) => item !== song);
+    musicData.save();
+    emitMusicChange(roomId);
+    res.status(200).send("Song removed successfully");
+  } catch (error) {
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 async function emitMusicChange(roomId) {
   const musicData = await findMusicData(roomId);
   for (id in channels[roomId]) {
@@ -495,16 +511,16 @@ io.sockets.on("connection", function (socket) {
     msg = data.message;
     const data2 = data.data;
     // console.log("[" + socket.id + "] broadcasting on channel '", ch);
-    if (data["message"]) // console.log("' a message: ", data.message);
-      if (data2) // console.log("' a data: ", data2);
-        for (id in channels[ch]) {
-          channels[ch][id].emit("broadcastMsg", {
-            peer_id: socket.id,
-            message: msg,
-            userdata: socket.userdata,
-            data: data2,
-          });
-        }
+    // console.log("' a message: ", data.message);
+    // console.log("' a data: ", data2);
+    for (id in channels[ch]) {
+      channels[ch][id].emit("broadcastMsg", {
+        peer_id: socket.id,
+        message: msg,
+        userdata: socket.userdata,
+        data: data2,
+      });
+    }
   });
 
   socket.on("relaySessionDescription", function (config) {

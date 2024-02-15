@@ -56,11 +56,13 @@ async function findMusicData(roomId) {
 }
 
 async function setNextCallback(timeout, roomId, index) {
-    // setTimeout(async () => {
-    //     let musicData = await findMusicData(roomId);
-    //     if (index != musicData.index) return;
-    //     await nextSong(roomId);
-    // }, timeout);
+    setTimeout(async () => {
+        console.log("setNextCallback function called with index =", index, "and roomId =", roomId, "and timeout =", timeout, "ms.");
+        let musicData = await findMusicData(roomId);
+        if (index != musicData.index) return;
+        console.log("Playing next song.");
+        await nextSong(roomId);
+    }, timeout);
 }
 
 async function play(req, res) {
