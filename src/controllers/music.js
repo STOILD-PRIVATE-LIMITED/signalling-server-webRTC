@@ -5,14 +5,13 @@ const { createCipheriv } = require('crypto');
 const path = require("path");
 
 async function getSongDuration(fileName, roomId) {
-    console.log("getSongDuration function called.");
     let parts = __dirname.split(path.sep);
     dir = parts.slice(0, parts.length - 2).join("/");
-    console.log("dir name =", dir);
     fileName = dir + "/public/" + roomId + "/" + fileName;
-    console.log("Absolute fileName =", fileName)
     try {
-        return (await getAudioDurationInSeconds(fileName)) * 1000
+        const duration = (await getAudioDurationInSeconds(fileName)) * 1000;
+        console.log(`getSongDuration(${fileName}) = `, duration);
+        return duration;
     } catch (e) {
         console.error(e);
         throw e;
@@ -20,15 +19,11 @@ async function getSongDuration(fileName, roomId) {
 }
 
 async function getMusicData(req, res) {
-    console.log("getMusicData function called.");
     const roomId = req.body.roomId;
-    console.log("roomId =", roomId);
     let musicData = null;
     try {
         musicData = await findMusicData(roomId);
-        console.log("musicData =", musicData);
         if (musicData == null || !musicData) {
-            console.log("Creating new music data.");
             const playlist = await getPlaylist(roomId);
             musicData = await MusicData.findOneAndUpdate({
                 roomId: roomId,
@@ -55,18 +50,21 @@ async function findMusicData(roomId) {
     return musicData;
 }
 
-async function setNextCallback(timeout, roomId, index) {
-    setTimeout(async () => {
-        console.log("setNextCallback function called with index =", index, "and roomId =", roomId, "and timeout =", timeout, "ms.");
-        let musicData = await findMusicData(roomId);
-        if (index != musicData.index) return;
+timeoutIndex = null;
+async function setNextCallback(timeout, roomId) {
+    if (timeoutIndex != null) {
+        console.log("Clearing previous timeout.");
+        clearTimeout(timeoutIndex);
+    }
+    console.log("setNextCallback function set with roomId =", roomId, "and timeout =", timeout, "ms.");
+    timeoutIndex = setTimeout(async () => {
         console.log("Playing next song.");
         await nextSong(roomId);
     }, timeout);
 }
 
 async function play(req, res) {
-    console.log("play function called.");
+    console.log("Play route");
     const roomId = req.body.roomId;
     let musicData = null;
     try {
@@ -86,8 +84,7 @@ async function play(req, res) {
             musicData.pauseDuration = 0;
         }
         musicData.isPlaying = true;
-        musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -96,7 +93,7 @@ async function play(req, res) {
 }
 
 async function pause(req, res) {
-    console.log("pause function called.");
+    console.log("pause route");
     const roomId = req.body.roomId;
     let musicData = null;
     try {
@@ -104,8 +101,11 @@ async function pause(req, res) {
         musicData.isPlaying = false;
         musicData.pauseDuration = Date.now() - musicData.startTime;
         musicData.startTime = 0;
-        musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        try {
+            clearTimeout(timeoutIndex);
+        } catch (e) {
+            console.error("Error Clearing Previous Timeout", e);
+        }
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -114,14 +114,10 @@ async function pause(req, res) {
 }
 
 async function next(req, res) {
-    console.log("next function called.");
+    console.log("next route");
     const roomId = req.body.roomId;
     try {
-        console.log("next song function is going to be called.");
         const musicData = await nextSong(req.body.roomId);
-        console.log("setNextCallback is going to be called.");
-        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
-        console.log("All Good!");
         res.send(musicData);
     } catch (e) {
         console.error(e);
@@ -133,6 +129,7 @@ async function next(req, res) {
 }
 
 async function nextSong(roomId) {
+    console.log("Moving onto Next Song");
     let musicData = null;
     musicData = await findMusicData(roomId);
     if (musicData.playlist.length == 0) {
@@ -146,12 +143,13 @@ async function nextSong(roomId) {
     }
     musicData.startTime = Date.now();
     musicData.isPlaying = true;
+    setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId);
     await musicData.save();
     return musicData;
 }
 
 async function previous(req, res) {
-    console.log("previous function called.");
+    console.log("previous route");
     const roomId = req.body.roomId;
     let musicData = null;
     try {
@@ -168,8 +166,7 @@ async function previous(req, res) {
         }
         musicData.startTime = Date.now();
         musicData.isPlaying = true;
-        musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId);
         musicData.save();
         res.status(200).send(musicData);
     }
@@ -179,7 +176,7 @@ async function previous(req, res) {
 }
 
 async function changeSong(req, res) {
-    console.log("changeSong function called.");
+    console.log("changeSong route");
     const roomId = req.body.roomId;
     const song = req.body.song;
     let musicData = null;
@@ -192,8 +189,7 @@ async function changeSong(req, res) {
         musicData.currentSong = song;
         musicData.startTime = Date.now();
         musicData.isPlaying = true;
-        musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -202,7 +198,7 @@ async function changeSong(req, res) {
 }
 
 async function addSong(req, res) {
-    console.log("addSong function called.");
+    console.log("addSong route");
     const roomId = req.body.roomId;
     const song = req.body.song;
     let musicData = null;
@@ -219,15 +215,15 @@ async function addSong(req, res) {
 }
 
 async function seek(req, res) {
-    console.log("seek function called.");
+    console.log("seek route");
     const roomId = req.body.roomId;
     const duration = req.body.duration;
+    console.log("seeking duration =", duration);
     let musicData = null;
     try {
         musicData = await findMusicData(roomId);
         musicData.startTime = Date.now() - duration;
-        musicData.index += 1;
-        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId, musicData.index);
+        setNextCallback(await getSongDuration(musicData.currentSong, roomId) - (Date.now() - musicData.startTime), roomId);
         musicData.save();
         res.status(200).send(musicData);
     } catch (e) {
@@ -236,13 +232,14 @@ async function seek(req, res) {
 }
 
 async function getPlaylist(roomId) {
+    console.log("getPlaylist route");
     const folder = "./public/" + roomId;
     if (!(fs.existsSync(folder))) {
         fs.mkdirSync(folder);
-        console.log(`Folder '${folder}' Created Successfully.`);
+        // console.log(`Folder '${folder}' Created Successfully.`);
     }
     const files = await fs.readdirSync(folder);
-    console.log(`Files in folder ${roomId} are ${files}`);
+    // console.log(`Files in folder ${roomId} are ${files}`);
     return files;
 }
 
