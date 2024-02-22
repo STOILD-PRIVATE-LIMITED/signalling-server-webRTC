@@ -305,18 +305,14 @@ io.sockets.on("connection", function (socket) {
       part(channel);
     }
     // // console.log("[" + socket.id + "] disconnected");
-    delete sockets[socket.id];
-    let userRoom;
-    for (room in channels) {
-      if (socket.id in room) {
-        userRoom = room;
-      }
-    }
-    if (UserGifts[userRoom])
+    let userRoom = socket.channels ? Object.keys(socket.channels)[0] :
+      Object.keys(socket.channels)[0];
+    if (userRoom && UserGifts[userRoom])
       UserGifts[userRoom][socketUserIds[socket.id]] = 0;
     for (id in channels[userRoom]) {
       channels[userRoom][id].emit("giftsUpdated", UserGifts[userRoom]);
     }
+    delete sockets[socket.id];
   });
 
   socket.on("join", function (config) {
