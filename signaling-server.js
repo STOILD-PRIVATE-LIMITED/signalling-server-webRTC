@@ -7,8 +7,10 @@ var http = require("http");
 const { exec } = require("child_process");
 // const https = require("https");
 const { channel } = require("diagnostics_channel");
-const { MusicData } = require('./models/music_data');
-const { getSongDuration,
+const { MusicData } = require("./models/music_data");
+const {User}=require("./models/user.js")
+const {
+  getSongDuration,
   getMusicData,
   play,
   pause,
@@ -18,7 +20,8 @@ const { getSongDuration,
   addSong,
   seek,
   getPlaylist,
-  findMusicData, } = require('./src/controllers/music.js')
+  findMusicData,
+} = require("./src/controllers/music.js");
 var giftTimerDetails = {};
 
 const app = express();
@@ -142,7 +145,7 @@ const storage = multer.diskStorage({
     // console.log("query = ", req.query);
     // console.log("file = ", file)
     folder = req.query.folder;
-    folder = `./public/${folder}`
+    folder = `./public/${folder}`;
     try {
       if (!fs.existsSync(folder)) {
         fs.mkdirSync(folder);
@@ -160,7 +163,7 @@ const storage = multer.diskStorage({
     // console.log("extension:", extension);
     cb(null, originalName);
   },
-  limits: { fileSize: 10485760 /* 10 mb */ }
+  limits: { fileSize: 10485760 /* 10 mb */ },
 });
 
 const upload = multer({ storage: storage });
@@ -209,13 +212,12 @@ app.get("/api/playlist", async (req, res) => {
     const files = await getPlaylist(req.query.roomId);
     res.status(500).json({
       err,
-      files
+      files,
     });
-  }
-  catch (e) {
+  } catch (e) {
     res.status(500).json({
-      err: e
-    })
+      err: e,
+    });
   }
 });
 
@@ -278,6 +280,7 @@ var sockets = {};
 var invitedUsers = {}; // {channel: [user1, user2, ...]}
 var UserGifts = {};
 var socketUserIds = {};
+var joinedAt = {};
 /**
  * Users will connect to the signaling server, after which they'll issue a "join"
  * to join a particular channel. The signaling server keeps track of all sockets
@@ -295,18 +298,22 @@ io.sockets.on("connection", function (socket) {
 
   // // console.log("[" + socket.id + "] connection accepted");
 
-  socket.on("connected", (userId) => {
-    socketUserIds[socket.id] = userId;
-  });
+  // socket.on("connected", (userId) => {
+  //   socketUserIds[socket.id] = userId;
+  // });
 
-  socket.on("disconnect", function () {
+  socket.on("disconnect", async function () {
     // // console.log("Disconnect event called");
+    let userId=socketUserIds[socket.id]
+    let activeTime=new Date()-joinedAt[userId]
+   await User.updateOne({userId},{$inc:{activeTime}})
     for (var channel in socket.channels) {
       part(channel);
     }
     // // console.log("[" + socket.id + "] disconnected");
-    let userRoom = socket.channels ? Object.keys(socket.channels)[0] :
-      Object.keys(socket.channels)[0];
+    let userRoom = socket.channels
+      ? Object.keys(socket.channels)[0]
+      : Object.keys(socket.channels)[0];
     if (userRoom && UserGifts[userRoom])
       UserGifts[userRoom][socketUserIds[socket.id]] = 0;
     for (id in channels[userRoom]) {
@@ -318,10 +325,12 @@ io.sockets.on("connection", function (socket) {
   socket.on("join", function (config) {
     // // console.log("Join event called");
     // // console.log("[" + socket.id + "] join ", config);
+  
     var channel = config.channel;
     var userdata = config.userdata;
     socket.userdata = userdata;
-
+    socketUserIds[socket.id] = userdata.userId;
+    joinedAt[ userdata.userId] = new Date();
     if (channel in socket.channels) {
       // // console.log("[" + socket.id + "] ERROR: already joined ", channel);
       return;
@@ -557,7 +566,8 @@ io.sockets.on("connection", function (socket) {
     if (giftTimerDetails[roomId].isRunning) {
       if (roomId in UserGifts) {
         if (userId in UserGifts[roomId]) {
-          UserGifts[roomId][userId] = UserGifts[roomId][userId] + diamonds * Quantity;
+          UserGifts[roomId][userId] =
+            UserGifts[roomId][userId] + diamonds * Quantity;
         } else {
           UserGifts[roomId][userId] = diamonds * Quantity;
         }
@@ -593,7 +603,7 @@ io.sockets.on("connection", function (socket) {
   // });
 
   socket.on("stop-timer", (data) => {
-    stopTimer(data)
+    stopTimer(data);
   });
 });
 
