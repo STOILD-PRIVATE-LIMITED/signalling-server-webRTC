@@ -304,9 +304,15 @@ io.sockets.on("connection", function (socket) {
 
   socket.on("disconnect", async function () {
     // // console.log("Disconnect event called");
+    console.log("socketUserIds list",socketUserIds)
+
     let userId=socketUserIds[socket.id]
+    console.log("userId in sisconnect object",userId,"joinedAt[userId]",joinedAt[userId])
     let activeTime=new Date()-joinedAt[userId]
-   await User.updateOne({userId},{$inc:{activeTime}})
+    console.log("activeTime",activeTime)
+  const valy= await User.updateOne({userId},{$inc:{activeTime}})
+
+  console.log("valy",valy)
     for (var channel in socket.channels) {
       part(channel);
     }
@@ -329,8 +335,12 @@ io.sockets.on("connection", function (socket) {
     var channel = config.channel;
     var userdata = config.userdata;
     socket.userdata = userdata;
-    socketUserIds[socket.id] = userdata.userId;
-    joinedAt[ userdata.userId] = new Date();
+    socketUserIds[socket.id] = userdata.id;
+    console.log("socketUserIds list",socketUserIds)
+    joinedAt[ userdata.id] = new Date();
+    console.log
+    console.log("userdata",userdata)
+    console.log("joinedAt list",joinedAt)
     if (channel in socket.channels) {
       // // console.log("[" + socket.id + "] ERROR: already joined ", channel);
       return;
