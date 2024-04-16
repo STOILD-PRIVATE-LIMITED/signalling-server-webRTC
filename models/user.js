@@ -64,9 +64,9 @@ const userSchema = new mongoose.Schema({
     type: [String],
     default: null,
   },
-  isBanned:{
-    type:Boolean,
-    default:false,
+  isBanned: {
+    type: Boolean,
+    default: false,
   },
   bannedAt: {
     type: Date,
@@ -76,11 +76,22 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
-  activeTime:{
-    type:Number,
-    default:0
-  }
-  
+  activeTime: {
+    type: Number,
+    default: 0,
+  },
+  todayActiveTime: {
+    type: Number,
+    default: 0,
+  },
+  activeDays: {
+    type: Number,
+    default: 0,
+  },
+  isTodayTimeComplete: {
+    type: Boolean,
+    default: false,
+  },
 });
 const User = mongoose.model("User", userSchema);
 exports.User = User;

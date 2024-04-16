@@ -8,7 +8,7 @@ const { exec } = require("child_process");
 // const https = require("https");
 const { channel } = require("diagnostics_channel");
 const { MusicData } = require("./models/music_data");
-const {User}=require("./models/user.js")
+const { User } = require("./models/user.js");
 const {
   getSongDuration,
   getMusicData,
@@ -304,15 +304,40 @@ io.sockets.on("connection", function (socket) {
 
   socket.on("disconnect", async function () {
     // // console.log("Disconnect event called");
-    console.log("socketUserIds list",socketUserIds)
+    console.log("socketUserIds list", socketUserIds);
 
-    let userId=socketUserIds[socket.id]
-    console.log("userId in sisconnect object",userId,"joinedAt[userId]",joinedAt[userId])
-    let activeTime=new Date()-joinedAt[userId]
-    console.log("activeTime",activeTime)
-  const valy= await User.updateOne({userId},{$inc:{activeTime}})
-
-  console.log("valy",valy)
+    let userId = socketUserIds[socket.id];
+    console.log(
+      "userId in sisconnect object",
+      userId,
+      "joinedAt[userId]",
+      joinedAt[userId]
+    );
+    let activeTime = new Date() - joinedAt[userId];
+    console.log("activeTime", activeTime);
+    const valy = await User.updateOne({ userId }, { $inc: { activeTime } });
+    const currUserData = await User.findOne({ userId });
+    if (
+      currUserData.todayActiveTime + activeTime > 3600000 &&
+      !currUserData.isTodayTimeComplete
+    ) {
+      await User.updateOne(
+        { userId },
+        {
+          $inc: { activeDays: 1, todayActiveTime: activeTime },
+          $set: { isTodayTimeComplete: true },
+        }
+      );
+    } else {
+      await User.updateOne(
+        { userId },
+        {
+          $inc: { todayActiveTime: activeTime },
+        }
+      );
+    }
+    
+    console.log("valy", valy);
     for (var channel in socket.channels) {
       part(channel);
     }
@@ -331,16 +356,16 @@ io.sockets.on("connection", function (socket) {
   socket.on("join", function (config) {
     // // console.log("Join event called");
     // // console.log("[" + socket.id + "] join ", config);
-  
+
     var channel = config.channel;
     var userdata = config.userdata;
     socket.userdata = userdata;
     socketUserIds[socket.id] = userdata.id;
-    console.log("socketUserIds list",socketUserIds)
-    joinedAt[ userdata.id] = new Date();
-    console.log
-    console.log("userdata",userdata)
-    console.log("joinedAt list",joinedAt)
+    console.log("socketUserIds list", socketUserIds);
+    joinedAt[userdata.id] = new Date();
+    console.log;
+    console.log("userdata", userdata);
+    console.log("joinedAt list", joinedAt);
     if (channel in socket.channels) {
       // // console.log("[" + socket.id + "] ERROR: already joined ", channel);
       return;
