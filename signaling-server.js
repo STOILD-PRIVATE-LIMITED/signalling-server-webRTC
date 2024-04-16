@@ -318,7 +318,7 @@ io.sockets.on("connection", function (socket) {
     const valy = await User.updateOne({ userId }, { $inc: { activeTime } });
     const currUserData = await User.findOne({ userId });
     if (
-      currUserData.todayActiveTime + activeTime > 3600000 &&
+      currUserData.todayActiveTime + activeTime >= 3600000 &&
       !currUserData.isTodayTimeComplete
     ) {
       await User.updateOne(
@@ -336,7 +336,7 @@ io.sockets.on("connection", function (socket) {
         }
       );
     }
-    
+
     console.log("valy", valy);
     for (var channel in socket.channels) {
       part(channel);
