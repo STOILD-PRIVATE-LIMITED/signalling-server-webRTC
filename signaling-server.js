@@ -50,7 +50,7 @@ app.get("/api/rooms", async (req, res) => {
     }
     res.status(200).json(roomData);
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: `Internal server error ${error}` });
   }
 });
 
@@ -105,12 +105,14 @@ app.get("/api/rooms/all", async (req, res) => {
     const startIndex = start ? parseInt(start, 10) : 0;
     const endIndex = limit ? startIndex + parseInt(limit, 10) : rooms.length;
     const paginatedRooms = rooms.slice(startIndex, endIndex);
-    const detailedRooms = await Promise.all(
+    // console.log("detailedRooms12")
+    let detailedRooms = await Promise.all(
       paginatedRooms.map(async (room) => {
         const roomData = await Room.findOne({ id: room.channelId });
         return roomData;
       })
     );
+    detailedRooms=detailedRooms.filter((room)=>room!=null)
     // // console.log("paginatedRooms", detailedRooms);
     res.status(200).json(detailedRooms);
   } catch (error) {

@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
   },
   country: {
     type: String,
-    default: null,
+    default: null, 
   },
   frame: {
     type: String,
