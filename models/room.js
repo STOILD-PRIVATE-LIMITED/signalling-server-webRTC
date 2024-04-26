@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-mongoose.connect('mongodb://0.0.0.0:27017/mastiplay1', {
+mongoose.connect('mongodb://0.0.0.0:27017/mastiplay', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 }); 

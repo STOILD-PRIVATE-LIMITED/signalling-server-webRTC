@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
   },
   country: {
     type: String,
-    default: null, 
+    default: null,
   },
   frame: {
     type: String,
@@ -92,6 +92,12 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // dailyActiveTime: {
+  //   type: Map,
+  //   of: Number,
+  //   default: {},
+  // },
+  dailyActiveTime: Object,
 });
 const User = mongoose.model("User", userSchema);
 exports.User = User;

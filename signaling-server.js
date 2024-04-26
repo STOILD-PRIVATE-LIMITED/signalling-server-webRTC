@@ -112,7 +112,7 @@ app.get("/api/rooms/all", async (req, res) => {
         return roomData;
       })
     );
-    detailedRooms=detailedRooms.filter((room)=>room!=null)
+    detailedRooms = detailedRooms.filter((room) => room != null);
     // // console.log("paginatedRooms", detailedRooms);
     res.status(200).json(detailedRooms);
   } catch (error) {
@@ -338,7 +338,27 @@ io.sockets.on("connection", function (socket) {
         }
       );
     }
-
+    let curr = new Date();
+    let currDate = curr.getDate()+1;
+    let currMonth = curr.getMonth() + 1;
+    let currYear = curr.getFullYear();
+    let dateString = `${currDate}-${currMonth}-${currYear}`;
+    console.log(
+      "currUserData.dailyActiveTime.dateString",
+      currUserData.dailyActiveTime[dateString],
+      currUserData
+    );
+    if (currUserData.dailyActiveTime[dateString]) {
+      await User.updateOne(
+        { userId },
+        { $inc: { [`dailyActiveTime.${dateString}`]: activeTime } }
+      );
+    } else {
+      await User.updateOne(
+        { userId },
+        { $set: { [`dailyActiveTime.${dateString}`]: activeTime } }
+      );
+    }
     console.log("valy", valy);
     for (var channel in socket.channels) {
       part(channel);
