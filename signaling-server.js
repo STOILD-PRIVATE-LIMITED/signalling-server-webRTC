@@ -342,12 +342,12 @@ io.sockets.on("connection", function (socket) {
     let currDate = curr.getDate()+1;
     let currMonth = curr.getMonth() + 1;
     let currYear = curr.getFullYear();
-    let dateString = `${currDate}-${currMonth}-${currYear}`;
+    let dateString  = `${currDate}-${currMonth}-${currYear}`;
     console.log(
-      "currUserData.dailyActiveTime.dateString",
+      "currUserData.dailyActiveTime.dateString", 
       currUserData.dailyActiveTime[dateString],
       currUserData
-    );
+    ); 
     if (currUserData.dailyActiveTime[dateString]) {
       await User.updateOne(
         { userId },
