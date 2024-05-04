@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
-mongoose.connect('mongodb://0.0.0.0:27017/mastiplay1', {
+mongoose.connect('mongodb://0.0.0.0:27017/mastiplay', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 }); 
 
 const roomSchema = new mongoose.Schema({
     id: String,
-    admin: String,
+    admin: [String],
     askBeforeJoining: { type: Boolean, default: false },
     roomType: Number,
     name: String,
