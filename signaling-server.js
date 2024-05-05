@@ -41,7 +41,7 @@ app.get("/api/rooms", async (req, res) => {
   try {
     let roomData;
     if (id) {
-      roomData = await Room.findById(id);
+      roomData = await Room.findOne({id});
     } else if (userId) {
       roomData = await Room.findOne({ admin: userId });
     }
@@ -549,7 +549,7 @@ io.sockets.on("connection", function (socket) {
     socket.emit("receiveUsers", { users: users });
   });
 
-  function part(channel) {
+  async function part(channel) {
     // console.log("Part event called");
     // console.log("[" + socket.id + "] part ");
 
@@ -584,6 +584,7 @@ io.sockets.on("connection", function (socket) {
       // console.log("Deleting room ", channel, " for it is empty");
       delete channels[channel];
       delete invitedUsers[channel];
+      await Room.deleteOne({id:channel})
     }
   }
   socket.on("part", part);
