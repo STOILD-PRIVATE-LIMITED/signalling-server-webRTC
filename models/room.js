@@ -16,6 +16,7 @@ const roomSchema = new mongoose.Schema(
     name: String,
     imgUrl: { type: String, default: null },
     announcement: { type: String, default: null },
+    PRP_ONLY_ADMIN_CHAT: { type: Boolean, default: false },
   },
   {
     timestamps: true,
