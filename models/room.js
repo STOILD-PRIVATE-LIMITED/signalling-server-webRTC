@@ -17,6 +17,7 @@ const roomSchema = new mongoose.Schema(
     imgUrl: { type: String, default: null },
     announcement: { type: String, default: null },
     PRP_ONLY_ADMIN_CHAT: { type: Boolean, default: false },
+    seatsLockingStatus: { type: [Boolean], default: Array(8).fill(true) },
   },
   {
     timestamps: true,

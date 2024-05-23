@@ -41,7 +41,7 @@ app.get("/api/rooms", async (req, res) => {
   try {
     let roomData;
     if (id) {
-      roomData = await Room.findOne({id});
+      roomData = await Room.findOne({ id });
     } else if (userId) {
       roomData = await Room.findOne({ admin: userId });
     }
@@ -112,20 +112,20 @@ app.put("/api/make-admin", async (req, res) => {
 app.put("/api/change-room", async (req, res) => {
   try {
     let allRooms = await Room.find({});
-    console.log("allRooms",allRooms)
-    for(let room of allRooms){
+    console.log("allRooms", allRooms);
+    for (let room of allRooms) {
       // console.log("Array.isArray(room.admin)",Array.isArray(room.admin))
       // if(!Array.isArray(room.admin)){
-        // if(room.admin.length===1){
-        // console.log("entered",room.id)
-        // room.admin=[room.admin]
-        // console.log("room after change",room)
+      // if(room.admin.length===1){
+      // console.log("entered",room.id)
+      // room.admin=[room.admin]
+      // console.log("room after change",room)
 
-        await room.save()
-        // }
+      await room.save();
+      // }
       // }
     }
-    res.send("room changed")
+    res.send("room changed");
   } catch (e) {
     res.status(500).send(`Internal server error ${e}`);
   }
@@ -292,6 +292,20 @@ app.post("/api/seek", async (req, res) => {
 app.post("/api/get-music-data", async (req, res) => {
   await getMusicData(req, res);
   emitMusicChange(req.body.roomId);
+});
+
+app.put("/api/lock", async (req, res) => {
+  const { roomId, seatIndex } = req.body;
+  try {
+    if(seatIndex<0 || seatIndex>7){return res.status(400).send("please provide valid seat index")}
+    let targetRoom = await Room.findOne({ id: roomId });
+    targetRoom.seatsLockingStatus[seatIndex] =
+      !targetRoom.seatsLockingStatus[seatIndex];
+      await targetRoom.save()
+      res.send(targetRoom);
+  } catch (e) {
+    res.status(500).send(`internal server error ${e}`);
+  }
 });
 
 let privateKey, certificate;
@@ -584,7 +598,7 @@ io.sockets.on("connection", function (socket) {
       // console.log("Deleting room ", channel, " for it is empty");
       delete channels[channel];
       delete invitedUsers[channel];
-      await Room.deleteOne({id:channel})
+      await Room.deleteOne({ id: channel });
     }
   }
   socket.on("part", part);
