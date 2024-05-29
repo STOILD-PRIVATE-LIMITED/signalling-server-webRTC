@@ -297,12 +297,12 @@ app.post("/api/get-music-data", async (req, res) => {
 app.put("/api/lock", async (req, res) => {
   const { roomId, seatIndex } = req.body;
   try {
-    if(seatIndex<0 || seatIndex>7){return res.status(400).send("please provide valid seat index")}
+    if (seatIndex < 0 || seatIndex > 7) { return res.status(400).send("please provide valid seat index") }
     let targetRoom = await Room.findOne({ id: roomId });
     targetRoom.seatsLockingStatus[seatIndex] =
       !targetRoom.seatsLockingStatus[seatIndex];
-      await targetRoom.save()
-      res.send(targetRoom);
+    await targetRoom.save()
+    res.send(targetRoom);
   } catch (e) {
     res.status(500).send(`internal server error ${e}`);
   }
@@ -497,36 +497,38 @@ io.sockets.on("connection", function (socket) {
       emitTimerStartToSocket(socket.id, channel);
     }
   });
+  socket.on("lockSeat", async function (config) {
+    const { roomId, seatIndex } = config;
+    try {
+      if (seatIndex < 0 || seatIndex > 7) {
+        console.error(`Invalid seatIndex: ${seatIndex}`);
+        return;
+      }
+      let targetRoom = await Room.findOne({ id: roomId });
+      targetRoom.seatsLockingStatus[seatIndex] =
+        !targetRoom.seatsLockingStatus[seatIndex];
+      await targetRoom.save();
+      for (id in channels[roomId]) {
+        channels[roomId][id].emit("seatsChanged", {
+          seats: invitedUsers[roomId],
+        });
+      }
+    } catch (e) {
+      console.error(`internal server error ${e}`);
+    }
+  });
 
   socket.on("inviteUser", function (config) {
-    // console.log("Invite event called");
     var channel = config.channel;
     var userId = config.userId;
     var seat = config.seat;
-    // console.log(`[${socket.userdata.id}] invite ${userId} to join ${channel} on seat ${seat}`);
-
     if (!(channel in channels)) {
-      // console.log(`[${socket.id}] ERROR: not in ${channel}`);
       return;
     }
-
-    if (invitedUsers[channel][seat]) {
-      // console.log(
-      //   `[${socket.id}] seat ${seat} is already occupied, replacing user ${invitedUsers[channel][seat]} with ${userId}`
-      // );
-    }
-
     if (invitedUsers[channel].indexOf(userId) !== -1) {
-      // console.log(
-      //   `[${socket.id}] user is already on seat ${invitedUsers[channel].indexOf(
-      //     userId
-      //   )}. Moving hime to new seat ${seat}`
-      // );
       invitedUsers[channel][invitedUsers[channel].indexOf(userId)] = null;
     }
-
     invitedUsers[channel][seat] = userId;
-
     for (id in channels[channel]) {
       channels[channel][id].emit("seatsChanged", {
         seats: invitedUsers[channel],
