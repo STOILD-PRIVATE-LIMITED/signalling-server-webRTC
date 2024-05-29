@@ -536,6 +536,25 @@ io.sockets.on("connection", function (socket) {
     }
   });
 
+  socket.on("removeUser", function (config) {
+    var channel = config.channel;
+    var userId = config.userId;
+    if (!(channel in channels)) {
+      console.error(`Channel ${channel} not found.`);
+      return;
+    }
+    if (invitedUsers[channel].indexOf(userId) == -1) {
+      console.error(`User ${userId} not found in channel ${channel}`);
+      return;
+    }
+    invitedUsers[channel][invitedUsers[channel].indexOf(userId)] = null;
+    for (id in channels[channel]) {
+      channels[channel][id].emit("seatsChanged", {
+        seats: invitedUsers[channel],
+      });
+    }
+  });
+
   socket.on("getSeats", function (config) {
     // // console.log("GetSeats event called");
     var channel = config.channel;
