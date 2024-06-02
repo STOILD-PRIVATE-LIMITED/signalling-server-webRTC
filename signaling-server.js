@@ -79,9 +79,9 @@ app.post("/api/rooms", async (req, res) => {
 // Update an existing room
 app.post("/api/update-room", async (req, res) => {
   // // console.log("post Request on '/api/update-room',");
-  const { admin } = req.body;
+  const { id } = req.body;
   try {
-    const existingRoom = await Room.findOne({ admin: admin });
+    const existingRoom = await Room.findOne({ id: id });
     if (!existingRoom) {
       // // console.log("Room not found with admin:", admin);
       return res.status(404).json({ error: "Room not found" });
