@@ -416,14 +416,14 @@ io.sockets.on("connection", function (socket) {
       );
     }
     console.log("valy", valy);
-    let users = [];
-    try {
-      users = Object.values(channels[channel]).map(
-        (socket) => socket.userdata
-      );
-    } catch (e) { }
     for (var channel in socket.channels) {
       part(channel);
+      let users = [];
+      try {
+        users = Object.values(channels[channel]).map(
+          (socket) => socket.userdata
+        );
+      } catch (e) { }
       for (id in channels[channel]) {
         console.log("receiveUsers emitted");
         channels[channel][id].emit("receiveUsers", { users: users });
