@@ -84,7 +84,7 @@ app.post("/api/update-room", async (req, res) => {
     const existingRoom = await Room.findOne({ id: id });
     if (!existingRoom) {
       // // console.log("Room not found with admin:", admin);
-      return res.status(404).json({ error: "Room not found" });
+      return res.status(404).json({ error: `Room not found for id: ${id}` });
     }
     await existingRoom.updateOne(req.body);
     res.json(existingRoom);
@@ -326,7 +326,8 @@ server.listen(port, null, function () {
 //app.use(express.bodyParser());
 
 app.get("/", function (req, res) {
-  res.sendFile(__dirname + "/client.html");
+  // res.sendFile(__dirname + "/client.html");
+  res.send("Download Mastiplay App from the PlayStore");
 });
 
 var channels = {};
@@ -360,7 +361,7 @@ io.sockets.on("connection", function (socket) {
     // // console.log("Disconnect event called");
     console.log("socketUserIds list", socketUserIds);
 
-    let userId = socketUserIds[socket.id];
+    let userId = socketUserIds[socket.id].trim();
     console.log(
       "userId in sisconnect object",
       userId,
@@ -370,7 +371,10 @@ io.sockets.on("connection", function (socket) {
     let activeTime = new Date() - joinedAt[userId];
     console.log("activeTime", activeTime);
     const valy = await User.updateOne({ userId }, { $inc: { activeTime } });
-    const currUserData = await User.findOne({ userId });
+    const currUserData = await User.findOne({ userId: userId });
+    console.log("userId=", userId);
+    console.log("currUserData=", currUserData);
+    console.log("currUserData.todayActiveTime=", currUserData.todayActiveTime);
     if (
       currUserData.todayActiveTime + activeTime >= 3600000 &&
       !currUserData.isTodayTimeComplete
@@ -421,8 +425,12 @@ io.sockets.on("connection", function (socket) {
       : Object.keys(socket.channels)[0];
     if (userRoom && UserGifts[userRoom])
       UserGifts[userRoom][socketUserIds[socket.id]] = 0;
+    const users = Object.values(channels[channel]).map(
+      (socket) => socket.userdata
+    );
     for (id in channels[userRoom]) {
       channels[userRoom][id].emit("giftsUpdated", UserGifts[userRoom]);
+      socket.emit("receiveUsers", { users: users });
     }
     delete sockets[socket.id];
   });
