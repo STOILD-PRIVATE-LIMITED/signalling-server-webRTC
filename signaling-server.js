@@ -425,9 +425,12 @@ io.sockets.on("connection", function (socket) {
       : Object.keys(socket.channels)[0];
     if (userRoom && UserGifts[userRoom])
       UserGifts[userRoom][socketUserIds[socket.id]] = 0;
-    const users = Object.values(channels[channel]).map(
-      (socket) => socket.userdata
-    );
+    let users = [];
+    try {
+      users = Object.values(channels[channel]).map(
+        (socket) => socket.userdata
+      );
+    } catch (e) { }
     for (id in channels[userRoom]) {
       channels[userRoom][id].emit("giftsUpdated", UserGifts[userRoom]);
       socket.emit("receiveUsers", { users: users });
