@@ -418,6 +418,10 @@ io.sockets.on("connection", function (socket) {
     console.log("valy", valy);
     for (var channel in socket.channels) {
       part(channel);
+      for (id in channels[channel]) {
+        console.log("receiveUsers emitted");
+        channels[channel][id].emit("receiveUsers", { users: users });
+      }
     }
     // // console.log("[" + socket.id + "] disconnected");
     let userRoom = socket.channels
@@ -433,7 +437,7 @@ io.sockets.on("connection", function (socket) {
     } catch (e) { }
     for (id in channels[userRoom]) {
       channels[userRoom][id].emit("giftsUpdated", UserGifts[userRoom]);
-      socket.emit("receiveUsers", { users: users });
+      channels[userRoom][id].emit("receiveUsers", { users: users });
     }
     delete sockets[socket.id];
   });
