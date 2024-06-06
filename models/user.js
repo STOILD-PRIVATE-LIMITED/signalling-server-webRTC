@@ -94,6 +94,7 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
     dailyActiveTime: { type: Object, default: {} },
+    joinedRoomId: { type: String, default: null },
   },
   { minimize: false }
 );

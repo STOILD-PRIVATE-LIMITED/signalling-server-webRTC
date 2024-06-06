@@ -362,6 +362,10 @@ io.sockets.on("connection", function (socket) {
     console.log("socketUserIds list", socketUserIds);
 
     let userId = socketUserIds[socket.id].trim();
+    console.log("updating joinedRoomId to null for userId", userId);
+    User.updateOne({ userId }, { joinedRoomId: null }).catch((e) => {
+      console.error("updating user error", e);
+    });
     console.log(
       "userId in sisconnect object",
       userId,
@@ -442,12 +446,17 @@ io.sockets.on("connection", function (socket) {
     delete sockets[socket.id];
   });
 
-  socket.on("join", function (config) {
+  socket.on("join", async function (config) {
     // // console.log("Join event called");
     // // console.log("[" + socket.id + "] join ", config);
 
     var channel = config.channel;
     var userdata = config.userdata;
+    var userId = userdata.id;
+    console.log(`updating joinedRoomId to ${channel} for userId`, userId);
+    User.updateOne({ userId }, { joinedRoomId: channel }).catch((e) => {
+      console.error("updating user error", e);
+    });
     socket.userdata = userdata;
     socketUserIds[socket.id] = userdata.id;
     console.log("socketUserIds list", socketUserIds);
