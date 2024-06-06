@@ -416,6 +416,12 @@ io.sockets.on("connection", function (socket) {
       );
     }
     console.log("valy", valy);
+    let users = [];
+    try {
+      users = Object.values(channels[channel]).map(
+        (socket) => socket.userdata
+      );
+    } catch (e) { }
     for (var channel in socket.channels) {
       part(channel);
       for (id in channels[channel]) {
@@ -429,12 +435,6 @@ io.sockets.on("connection", function (socket) {
       : Object.keys(socket.channels)[0];
     if (userRoom && UserGifts[userRoom])
       UserGifts[userRoom][socketUserIds[socket.id]] = 0;
-    let users = [];
-    try {
-      users = Object.values(channels[channel]).map(
-        (socket) => socket.userdata
-      );
-    } catch (e) { }
     for (id in channels[userRoom]) {
       channels[userRoom][id].emit("giftsUpdated", UserGifts[userRoom]);
       channels[userRoom][id].emit("receiveUsers", { users: users });
